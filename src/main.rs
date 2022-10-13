@@ -1,13 +1,18 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+use std::io::Read;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
-use sounds::SoundGenerator;
+use crossbeam::channel::unbounded;
+use sounds::{SoundCommand, SoundGenerator};
+
+use crate::sounds::FrequencyComponent;
 
 mod sounds;
 
-fn make_device_and_config() -> (cpal::Device, cpal::StreamConfig) {
+fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();
     let device = host.default_output_device().expect("No output available");
 
@@ -47,9 +52,10 @@ fn error_callback(err: StreamError) {
 }
 
 fn main() {
+    let (snd, rcv) = unbounded();
     let (device, config) = make_device_and_config();
     // let mut generator = Box::new(SoundGenerator::new(&config));
-    let mut generator = SoundGenerator::new(config.sample_rate.0 as f32);
+    let mut generator = SoundGenerator::new(config.sample_rate.0 as f32, Some(rcv));
     println!("{:?}", generator);
 
     let on_window = move |samples: &mut [f32], info: &cpal::OutputCallbackInfo, generator: &mut SoundGenerator| {
@@ -69,5 +75,23 @@ fn main() {
 
     stream.play().unwrap();
 
-    std::thread::sleep(std::time::Duration::from_millis(10000));
+    loop {
+        let mut buffer = String::new();
+        let stdin = std::io::stdin();
+        eprint!("> ");
+        stdin.read_line(&mut buffer).unwrap();
+        let words: Vec<_> = buffer.trim().split_ascii_whitespace().collect();
+        if words.len() == 0 {
+            continue;
+        }
+
+        match words[0] {
+            "clear" => snd.send(SoundCommand::ClearWaveform).unwrap(),
+            "add" => snd.send(SoundCommand::AddWaveform(FrequencyComponent::new_simple(words[1].parse().unwrap()))).unwrap(),
+            "remove" => snd.send(SoundCommand::RemoveWaveform(words[1].parse().unwrap())).unwrap(),
+            "volume" => snd.send(SoundCommand::SetVolume(words[1].parse().unwrap())).unwrap(),
+            "exit" => return,
+            _ => eprintln!("Unsupported command!"),
+        }
+    }
 }

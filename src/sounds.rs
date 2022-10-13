@@ -1,5 +1,5 @@
 use cpal::StreamConfig;
-use rand::seq::index::sample;
+use crossbeam::channel::Receiver;
 
 #[derive(Debug)]
 pub struct FrequencyComponent {
@@ -44,10 +44,19 @@ pub struct SoundGenerator {
     volume_transition: f32,
     
     waveform: Vec<FrequencyComponent>,
+    commands: Option<Receiver<SoundCommand>>,
+}
+
+#[derive(Debug)]
+pub enum SoundCommand {
+    SetVolume(f32),
+    AddWaveform(FrequencyComponent),
+    RemoveWaveform(f32),
+    ClearWaveform,
 }
 
 impl SoundGenerator {
-    pub fn new(sample_rate: f32) -> Self {
+    pub fn new(sample_rate: f32, commands: Option<Receiver<SoundCommand>>) -> Self {
         SoundGenerator {
             sample_rate,
             sample_clock: 0.0,
@@ -58,6 +67,7 @@ impl SoundGenerator {
                 FrequencyComponent::new_simple(190.4762),
                 FrequencyComponent::new_simple(239.4558),
             ],
+            commands,
         }
     }
 
@@ -66,6 +76,17 @@ impl SoundGenerator {
     }
 
     pub fn tick(&mut self) -> f32 {
+        if let Some(ref receiver) = self.commands {
+            if let Ok(command) = receiver.try_recv() {
+                match command {
+                    SoundCommand::SetVolume(v) => self.volume = v,
+                    SoundCommand::AddWaveform(w) => self.waveform.push(w),
+                    SoundCommand::RemoveWaveform(f) => self.waveform.retain(|w| w.frequency != f),
+                    SoundCommand::ClearWaveform => self.waveform.clear(),
+                }
+            }
+        }
+
         self.sample_clock += 1.;
 
         if self.volume_transition > 0.0 {
@@ -89,7 +110,7 @@ impl SoundGenerator {
 }
 
 pub fn test_sound_generator() {
-    let mut generator = SoundGenerator::new(44100.);
+    let mut generator = SoundGenerator::new(44100., None);
 
     for i in 0..100 {
         let mut buffer = [0f32; 4410];
