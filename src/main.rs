@@ -2,10 +2,9 @@
 #![allow(dead_code)]
 
 use std::io::Read;
-
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
-use crossbeam::channel::unbounded;
+use crossbeam::channel;
 use sounds::{SoundCommand, SoundGenerator};
 
 use crate::sounds::FrequencyComponent;
@@ -51,27 +50,27 @@ fn error_callback(err: StreamError) {
     println!("An error occurred: {:?}", err);
 }
 
+fn on_window(samples: &mut [f32], info: &cpal::OutputCallbackInfo, generator: &mut SoundGenerator) {
+    for chunk in samples.chunks_mut(2) {
+        let value = generator.tick();
+        for sample in chunk.iter_mut() {
+            *sample = value
+        }
+    }
+}
+
 fn main() {
-    let (snd, rcv) = unbounded();
+    let (snd, rcv) = channel::unbounded();
     let (device, config) = make_device_and_config();
-    // let mut generator = Box::new(SoundGenerator::new(&config));
     let mut generator = SoundGenerator::new(config.sample_rate.0 as f32, Some(rcv));
     println!("{:?}", generator);
-
-    let on_window = move |samples: &mut [f32], info: &cpal::OutputCallbackInfo, generator: &mut SoundGenerator| {
-        for chunk in samples.chunks_mut(2) {
-            let value = generator.tick();
-            for sample in chunk.iter_mut() {
-                *sample = value
-            }
-        }
-    };
 
     let stream = make_output_stream(
         device,
         &config,
         on_window,
-        generator);
+        generator
+    );
 
     stream.play().unwrap();
 
@@ -87,7 +86,10 @@ fn main() {
 
         match words[0] {
             "clear" => snd.send(SoundCommand::ClearWaveform).unwrap(),
-            "add" => snd.send(SoundCommand::AddWaveform(FrequencyComponent::new_simple(words[1].parse().unwrap()))).unwrap(),
+            "add" => {
+                let component = FrequencyComponent::new_simple(words[1].parse().unwrap());
+                snd.send(SoundCommand::AddWaveform(component)).unwrap()
+            }
             "remove" => snd.send(SoundCommand::RemoveWaveform(words[1].parse().unwrap())).unwrap(),
             "volume" => snd.send(SoundCommand::SetVolume(words[1].parse().unwrap())).unwrap(),
             "exit" => return,
