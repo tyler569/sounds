@@ -35,6 +35,15 @@ impl FrequencyComponent {
 }
 
 #[derive(Debug)]
+pub enum SoundCommand {
+    SetVolume(f32),
+    TransitionVolume(f32),
+    AddWaveform(FrequencyComponent),
+    RemoveWaveform(f32),
+    ClearWaveform,
+}
+
+#[derive(Debug)]
 pub struct SoundGenerator {
     sample_clock: f32,
     sample_rate: f32,
@@ -45,14 +54,6 @@ pub struct SoundGenerator {
     
     waveform: Vec<FrequencyComponent>,
     commands: Option<Receiver<SoundCommand>>,
-}
-
-#[derive(Debug)]
-pub enum SoundCommand {
-    SetVolume(f32),
-    AddWaveform(FrequencyComponent),
-    RemoveWaveform(f32),
-    ClearWaveform,
 }
 
 impl SoundGenerator {
@@ -79,6 +80,10 @@ impl SoundGenerator {
         if let Some(ref receiver) = self.commands {
             if let Ok(command) = receiver.try_recv() {
                 match command {
+                    SoundCommand::TransitionVolume(v) => {
+                        self.volume_target = v;
+                        self.volume_transition = 1.0;
+                    }
                     SoundCommand::SetVolume(v) => self.volume = v,
                     SoundCommand::AddWaveform(w) => self.waveform.push(w),
                     SoundCommand::RemoveWaveform(f) => self.waveform.retain(|w| w.frequency != f),
