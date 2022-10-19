@@ -65,8 +65,18 @@ impl SoundGenerator {
             volume_target: 0.1,
             volume_transition: 0.0,
             waveform: vec![
-                FrequencyComponent::new_simple(190.4762),
-                FrequencyComponent::new_simple(239.4558),
+                // FrequencyComponent::new_simple(190.4762),
+                // FrequencyComponent::new_simple(239.4558),
+
+                // FrequencyComponent::new_simple(31.25 * 14.0),
+                // FrequencyComponent::new_simple(31.25 * 15.0),
+                // FrequencyComponent::new_simple(31.25 * 16.0),
+                // FrequencyComponent::new_simple(31.25 * 17.0),
+                // FrequencyComponent::new_simple(31.25 * 18.0),
+                // FrequencyComponent::new_simple(31.25 * 25.0),
+                // FrequencyComponent::new_simple(31.25 * 34.0),
+                // FrequencyComponent::new_simple(31.25 * 36.0),
+                // FrequencyComponent::new_simple(31.25 * 37.0),
             ],
             commands,
         }
@@ -82,7 +92,7 @@ impl SoundGenerator {
                 match command {
                     SoundCommand::TransitionVolume(v) => {
                         self.volume_target = v;
-                        self.volume_transition = 1.0;
+                        self.volume_transition = 0.02;
                     }
                     SoundCommand::SetVolume(v) => self.volume = v,
                     SoundCommand::AddWaveform(w) => self.waveform.push(w),
@@ -104,9 +114,18 @@ impl SoundGenerator {
 
         let total_volume: f32 = self.waveform.iter().map(|w| w.relative_volume).sum();
 
+        if total_volume == 0.0 {
+            return 0.0;
+        }
+
         let raw_sample: f32 = self.waveform.iter().map(|w| {
             (self.sample_clock * w.frequency * 2. * std::f32::consts::PI / self.sample_rate + w.phase).sin() * w.relative_volume / total_volume
         }).sum();
+
+        if !(raw_sample <= 1.0 && raw_sample >= -1.0) {
+            eprintln!("illegal sample: {}", raw_sample);
+            eprintln!("waveform: {:?}", self.waveform);
+        }
 
         assert!(raw_sample <= 1.0 && raw_sample >= -1.0);
 
