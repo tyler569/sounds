@@ -51,7 +51,7 @@ pub struct SoundGenerator {
     volume: f32,
     volume_target: f32,
     volume_transition: f32,
-    
+
     waveform: Vec<FrequencyComponent>,
     commands: Option<Receiver<SoundCommand>>,
 }
@@ -83,7 +83,8 @@ impl SoundGenerator {
     }
 
     pub fn push_frequency(&mut self, frequency: f32) {
-        self.waveform.push(FrequencyComponent::new_simple(frequency));
+        self.waveform
+            .push(FrequencyComponent::new_simple(frequency));
     }
 
     pub fn tick(&mut self) -> f32 {
@@ -109,7 +110,7 @@ impl SoundGenerator {
             let volume_step = volume_diff / (self.volume_transition * self.sample_rate);
 
             self.volume += volume_step;
-            self.volume_transition -= 1./self.sample_rate;
+            self.volume_transition -= 1. / self.sample_rate;
         }
 
         let total_volume: f32 = self.waveform.iter().map(|w| w.relative_volume).sum();
@@ -118,9 +119,17 @@ impl SoundGenerator {
             return 0.0;
         }
 
-        let raw_sample: f32 = self.waveform.iter().map(|w| {
-            (self.sample_clock * w.frequency * 2. * std::f32::consts::PI / self.sample_rate + w.phase).sin() * w.relative_volume / total_volume
-        }).sum();
+        let raw_sample: f32 = self
+            .waveform
+            .iter()
+            .map(|w| {
+                (self.sample_clock * w.frequency * 2. * std::f32::consts::PI / self.sample_rate
+                    + w.phase)
+                    .sin()
+                    * w.relative_volume
+                    / total_volume
+            })
+            .sum();
 
         if !(raw_sample <= 1.0 && raw_sample >= -1.0) {
             eprintln!("illegal sample: {}", raw_sample);

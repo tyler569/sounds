@@ -1,49 +1,63 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-use std::f32::consts::PI;
-
-use rustyline::error::ReadlineError;
-use sounds::{FrequencyComponent, SoundCommand};
+use clap::Parser;
 use crossbeam::channel;
+use rustyline::error::ReadlineError;
+use soundgen::{FrequencyComponent, SoundCommand};
+use std::{f32::consts::PI, process::exit};
 
 mod listen;
 mod output;
-mod sounds;
+mod soundgen;
+mod ui;
 
-fn ui(snd: channel::Sender<SoundCommand>) {
-    loop {
-        let mut rl = rustyline::Editor::<()>::new().unwrap();
-        let readline = match rl.readline(">> ") {
-            Ok(line) => line,
-            Err(ReadlineError::Interrupted) => break,
-            Err(_) => continue,
-        };
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value_t = 30.0)]
+    target_fbucket: f32,
 
-        let words: Vec<_> = readline.trim().split_ascii_whitespace().collect();
-        if words.len() == 0 {
-            continue;
-        }
+    #[arg(short, long)]
+    input: bool,
 
-        match words[0] {
-            "clear" => snd.send(SoundCommand::ClearWaveform).unwrap(),
-            "add" => {
-                let component = FrequencyComponent::new_simple(words[1].parse().unwrap());
-                snd.send(SoundCommand::AddWaveform(component)).unwrap()
-            }
-            "remove" => snd.send(SoundCommand::RemoveWaveform(words[1].parse().unwrap())).unwrap(),
-            "volume" => snd.send(SoundCommand::TransitionVolume(words[1].parse().unwrap())).unwrap(),
-            "Volume" => snd.send(SoundCommand::SetVolume(words[1].parse().unwrap())).unwrap(),
-            "exit" => return,
-            _ => eprintln!("Unsupported command!"),
-        }
-    }
+    #[arg(short, long)]
+    output: bool,
+
+    #[arg(short, long)]
+    ui: bool,
 }
 
 fn main() {
-    let (ostream, commands) = output::output();
-    let istream = listen::listen();
+    let args = Args::parse();
 
+    let mut istream = None;
+    let mut ostream = None;
+    let mut commands = None;
+    let mut fbucket = None;
+
+    if args.input {
+        let i = listen::listen(args.target_fbucket);
+        (istream, fbucket) = (Some(i.0), Some(i.1));
+    }
+
+    if args.output {
+        let o = output::output();
+        (ostream, commands) = (Some(o.0), Some(o.1));
+    }
+
+    if args.ui {
+        if let Some(snd) = commands {
+            ui::ui(snd);
+        } else {
+            eprintln!("Cannot do input UI without sound output");
+            exit(1);
+        }
+    } else {
+        std::thread::sleep(std::time::Duration::from_secs(10000));
+    }
+
+    /*
     let data = "Hello World";
     let mut iter = data.bytes().cycle();
 
@@ -72,7 +86,5 @@ fn main() {
         commands.send(SoundCommand::ClearWaveform);
     }
 
-    // ui(commands);
-
-    std::thread::sleep(std::time::Duration::from_secs(100000));
+    */
 }

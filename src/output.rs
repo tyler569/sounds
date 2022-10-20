@@ -1,7 +1,7 @@
+use crate::soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
 use crossbeam::channel;
-use crate::sounds::{SoundCommand, SoundGenerator, FrequencyComponent};
 
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();
@@ -24,18 +24,20 @@ fn make_output_stream<F>(
     device: Device,
     config: &StreamConfig,
     mut on_window: F,
-    mut generator: SoundGenerator
+    mut generator: SoundGenerator,
 ) -> Stream
 where
-    F: FnMut(&mut [f32], &cpal::OutputCallbackInfo, &mut SoundGenerator) + Send + Sync + 'static
+    F: FnMut(&mut [f32], &cpal::OutputCallbackInfo, &mut SoundGenerator) + Send + Sync + 'static,
 {
-    device.build_output_stream(
-        config,
-        move |samples: &mut [f32], info: &cpal::OutputCallbackInfo| {
-            on_window(samples, info, &mut generator);
-        },
-        error_callback,
-    ).unwrap()
+    device
+        .build_output_stream(
+            config,
+            move |samples: &mut [f32], info: &cpal::OutputCallbackInfo| {
+                on_window(samples, info, &mut generator);
+            },
+            error_callback,
+        )
+        .unwrap()
 }
 
 fn error_callback(err: StreamError) {
@@ -57,12 +59,7 @@ pub fn output() -> (Stream, channel::Sender<SoundCommand>) {
     let mut generator = SoundGenerator::new(config.sample_rate.0 as f32, Some(rcv));
     println!("{:?}", generator);
 
-    let stream = make_output_stream(
-        device,
-        &config,
-        on_window,
-        generator
-    );
+    let stream = make_output_stream(device, &config, on_window, generator);
 
     stream.play().unwrap();
 
