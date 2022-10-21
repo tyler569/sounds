@@ -1,10 +1,10 @@
-use std::{f32::consts::PI, ops::Range};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, InputStreamTimestamp, Stream,
 };
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
+use std::{f32::consts::PI, ops::Range};
 
 mod decode;
 use decode::Decoder;
@@ -126,12 +126,13 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
     let mut config = device.default_input_config().unwrap().config();
     let sample_rate = config.sample_rate.0 as f32;
 
+    let possible_fbuckets = (0..18).map(|v| sample_rate / 2.0 / ((2.0).powf(v as f32)));
 
-    let possible_fbuckets = (0..18)
-        .map(|v| sample_rate / 2.0 / ((2.0).powf(v as f32)));
+    println!(
+        "possible buckets: {:?}",
+        possible_fbuckets.clone().collect::<Vec<_>>()
+    );
 
-    println!("possible buckets: {:?}", possible_fbuckets.clone().collect::<Vec<_>>());
-    
     let best_buffer = possible_fbuckets
         .enumerate()
         .min_by_key(|(i, v)| ((target_fbucket - v).abs() * 10000.0) as i64)

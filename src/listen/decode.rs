@@ -29,7 +29,7 @@ impl Decoder {
     pub fn sample(&mut self, point: &FftPoint) -> Option<u64> {
         if point.amplitude < 4.0 {
             self.last_bucket = None;
-            return None
+            return None;
         }
 
         if self.phase_offset.is_none() {
@@ -53,22 +53,30 @@ impl Decoder {
 
     /// Adjust FFT phase to be relative to the local baseline
     fn offset_phase(&self, phase: f32) -> f32 {
-        mod_add(phase, self.phase_offset.expect("This is always set in `sample`"))
+        mod_add(
+            phase,
+            self.phase_offset.expect("This is always set in `sample`"),
+        )
     }
 
     /// Adjust local phase baseline to account for drift over time
-    /// 
+    ///
     /// Takes an observed phase and a guessed bucket, adjusts the local
     /// `phase_offset` such that `self.offset_phase(phase)` would equal
     /// `self.phase_bucket_middle(bucket)`
     fn adjust_phase_offset(&mut self, phase: f32, bucket: usize) {
         let target = self.phase_bucket_middle(bucket);
         let diff = mod_sub(phase, target);
-        assert!(diff < self.phase_bucket_width() / 2.0 ||
-            diff > 1.0 - self.phase_bucket_width() / 2.0);
 
-        self.phase_offset = Some(
-            mod_sub(self.phase_offset.expect("Set in `sample`"), diff));
+        if diff > 0.02 {
+            return;
+        }
+
+        assert!(
+            diff < self.phase_bucket_width() / 2.0 || diff > 1.0 - self.phase_bucket_width() / 2.0
+        );
+
+        self.phase_offset = Some(mod_sub(self.phase_offset.expect("Set in `sample`"), diff));
     }
 
     fn phase_bucket_width(&self) -> f32 {

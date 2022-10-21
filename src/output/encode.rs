@@ -1,8 +1,8 @@
-use std::{time::Duration, io::Write, thread::sleep, f32::consts::PI};
+use std::{f32::consts::PI, io::Write, thread::sleep, time::Duration};
 
 use crossbeam::channel::Sender;
 
-use super::soundgen::{SoundCommand, FrequencyComponent};
+use super::soundgen::{FrequencyComponent, SoundCommand};
 
 pub struct Encoder {
     commands: Sender<SoundCommand>,
@@ -22,7 +22,7 @@ pub struct Encoder {
 
 impl Encoder {
     pub fn new(fbucket: f32, commands: Sender<SoundCommand>) -> Self {
-        let encoder =Self {
+        let encoder = Self {
             commands,
 
             fbucket,

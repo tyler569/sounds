@@ -3,8 +3,11 @@
 
 use clap::Parser;
 use crossbeam::channel;
+use output::{
+    encode::Encoder,
+    soundgen::{FrequencyComponent, SoundCommand},
+};
 use rustyline::error::ReadlineError;
-use output::{soundgen::{FrequencyComponent, SoundCommand}, encode::Encoder};
 use std::{f32::consts::PI, io::Write, process::exit};
 
 mod listen;
@@ -54,11 +57,14 @@ fn main() {
         }
     }
 
-
     if let Some(ref commands) = commands {
         let mut encoder = Encoder::new(31.25, commands.clone());
 
-        write!(encoder, "Hello World");
+        write!(
+            encoder,
+            "{}",
+            "Hello World".chars().cycle().take(1000).collect::<String>()
+        );
     }
 
     if !args.ui && false {

@@ -1,58 +1,58 @@
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
 use cpal::StreamConfig;
 use crossbeam::channel::Receiver;
 
 #[derive(Debug)]
 pub struct FrequencyComponent {
-    frequency: f32,
-    phase: f32,
-    relative_volume: f32,
+    frequency: f64,
+    phase: f64,
+    relative_volume: f64,
 }
 
 impl FrequencyComponent {
-    pub const fn new_simple(frequency: f32) -> Self {
+    pub fn new_simple(f: impl Into<f64>) -> Self {
         Self {
-            frequency,
+            frequency: f.into(),
             phase: 0.0,
             relative_volume: 1.0,
         }
     }
 
-    pub const fn new_volume(frequency: f32, relative_volume: f32) -> Self {
+    pub fn new_volume(f: impl Into<f64>, v: impl Into<f64>) -> Self {
         Self {
-            frequency,
+            frequency: f.into(),
             phase: 0.0,
-            relative_volume,
+            relative_volume: v.into(),
         }
     }
 
-    pub const fn new(frequency: f32, phase: f32, relative_volume: f32) -> Self {
+    pub fn new(f: impl Into<f64>, p: impl Into<f64>, v: impl Into<f64>) -> Self {
         Self {
-            frequency,
-            phase,
-            relative_volume,
+            frequency: f.into(),
+            phase: p.into(),
+            relative_volume: v.into(),
         }
     }
 }
 
 #[derive(Debug)]
 pub enum SoundCommand {
-    SetVolume(f32),
-    TransitionVolume(f32),
+    SetVolume(f64),
+    TransitionVolume(f64),
     AddWaveform(FrequencyComponent),
-    RemoveWaveform(f32),
+    RemoveWaveform(f64),
     ClearWaveform,
 }
 
 #[derive(Debug)]
 pub struct SoundGenerator {
-    sample_clock: f32,
-    sample_rate: f32,
+    sample_clock: f64,
+    sample_rate: f64,
 
-    volume: f32,
-    volume_target: f32,
-    volume_transition: f32,
+    volume: f64,
+    volume_target: f64,
+    volume_transition: f64,
 
     waveform: Vec<FrequencyComponent>,
 
@@ -62,7 +62,7 @@ pub struct SoundGenerator {
 impl SoundGenerator {
     pub fn new(sample_rate: f32, commands: Option<Receiver<SoundCommand>>) -> Self {
         SoundGenerator {
-            sample_rate,
+            sample_rate: sample_rate as f64,
             sample_clock: 0.0,
             volume: 0.1,
             volume_target: 0.1,
@@ -75,26 +75,24 @@ impl SoundGenerator {
         }
     }
 
-    pub fn push_frequency(&mut self, frequency: f32) {
+    pub fn push_frequency(&mut self, frequency: f64) {
         self.waveform
             .push(FrequencyComponent::new_simple(frequency));
     }
 
-    fn sample(&self, waveform: &[FrequencyComponent]) -> Option<f32> {
-        let total_volume: f32 = waveform.iter().map(|w| w.relative_volume).sum();
+    fn sample(&self, waveform: &[FrequencyComponent]) -> Option<f64> {
+        let total_volume: f64 = waveform.iter().map(|w| w.relative_volume).sum();
         if total_volume == 0.0 {
-            return None
+            return None;
         }
 
-        let sample_single = |w: &FrequencyComponent| -> f32 {
-            (self.sample_clock * w.frequency * 2.0 * PI / self.sample_rate + w.phase)
-                .sin() * w.relative_volume / total_volume
+        let sample_single = |w: &FrequencyComponent| -> f64 {
+            (self.sample_clock * w.frequency * 2.0 * PI / self.sample_rate + w.phase).sin()
+                * w.relative_volume
+                / total_volume
         };
 
-        let sample = waveform
-            .iter()
-            .map(sample_single)
-            .sum::<f32>();
+        let sample: f64 = waveform.iter().map(sample_single).sum();
 
         Some(sample)
     }
@@ -131,7 +129,6 @@ impl SoundGenerator {
         }
         let raw_sample = raw_sample.unwrap();
 
-
         if !(raw_sample <= 1.0 && raw_sample >= -1.0) {
             eprintln!("illegal sample: {}", raw_sample);
             eprintln!("waveform: {:?}", self.waveform);
@@ -139,7 +136,7 @@ impl SoundGenerator {
 
         assert!(raw_sample <= 1.0 && raw_sample >= -1.0);
 
-        raw_sample * self.volume
+        (raw_sample * self.volume) as f32
     }
 }
 

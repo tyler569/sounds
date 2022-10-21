@@ -20,7 +20,7 @@ pub fn ui(snd: channel::Sender<SoundCommand>) {
         match words[0] {
             "clear" => snd.send(SoundCommand::ClearWaveform).unwrap(),
             "add" => {
-                let component = FrequencyComponent::new_simple(words[1].parse().unwrap());
+                let component = FrequencyComponent::new_simple(words[1].parse::<f64>().unwrap());
                 snd.send(SoundCommand::AddWaveform(component)).unwrap()
             }
             "remove" => snd
