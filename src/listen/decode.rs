@@ -8,19 +8,21 @@ pub struct Decoder {
     amplitude_offset: Option<f32>,
 
     last_bucket: Option<usize>,
+    seen: usize,
 }
 
 impl Decoder {
     const PHASE_SPECTRUM: f32 = 1.0;
 
-    pub fn new() -> Self {
+    pub fn new(phase_buckets: usize) -> Self {
         Self {
-            phase_buckets: 4,
+            phase_buckets,
             phase_offset: None,
             amplitude_buckets: 1,
             amplitude_offset: None,
 
             last_bucket: None,
+            seen: 0,
         }
     }
 
@@ -29,6 +31,12 @@ impl Decoder {
     pub fn sample(&mut self, point: &FftPoint) -> Option<u64> {
         if point.amplitude < 4.0 {
             self.last_bucket = None;
+            return None;
+        }
+
+        self.seen += 1;
+        if self.seen == 1 {
+            // discard the first sample
             return None;
         }
 

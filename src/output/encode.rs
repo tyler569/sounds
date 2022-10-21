@@ -18,24 +18,28 @@ pub struct Encoder {
 
     symbol_duration: Duration,
     pause_duration: Duration,
+
+    volume: f64,
 }
 
 impl Encoder {
-    pub fn new(fbucket: f32, commands: Sender<SoundCommand>) -> Self {
+    pub fn new(fbucket: f32, phase_buckets: usize, commands: Sender<SoundCommand>) -> Self {
         let encoder = Self {
             commands,
 
             fbucket,
 
-            channels: 4,
+            channels: 6,
             base_channel: 14,
             step: 2,
 
             amplitude_buckets: 1,
-            phase_buckets: 4,
+            phase_buckets,
 
-            symbol_duration: Duration::from_millis(200),
-            pause_duration: Duration::from_millis(100),
+            symbol_duration: Duration::from_millis(250),
+            pause_duration: Duration::from_millis(50),
+
+            volume: 0.2,
         };
 
         println!("Encoder!");
@@ -47,26 +51,26 @@ impl Encoder {
     }
 
     pub fn send_calibration(&self) {
-        self.commands.send(SoundCommand::ClearWaveform);
+        self.off();
         sleep(Duration::from_millis(100));
-        self.commands.send(SoundCommand::SetVolume(0.0));
+        self.clear();
 
         for i in 0..self.channels {
             let freq = self.channel_frequency(i);
             let wave = FrequencyComponent::new_simple(freq);
-            self.commands.send(SoundCommand::AddWaveform(wave));
+            self.add(wave);
         }
 
-        self.commands.send(SoundCommand::TransitionVolume(0.1));
+        self.on();
         sleep(self.symbol_duration * 2);
-        self.commands.send(SoundCommand::TransitionVolume(0.0));
+        self.off();
         sleep(self.pause_duration);
     }
 
     /// Invariants: when you call this method, the volume is 0 and the quiet
     /// period has already passed.
     pub fn send_symbol(&self, mut data: u64) {
-        self.commands.send(SoundCommand::ClearWaveform);
+        self.clear();
 
         let bits = self.bits_per_symbol() / self.channels();
         let mask = 2_u64.pow(bits) - 1;
@@ -90,14 +94,12 @@ impl Encoder {
             let phase = phase_bucket as f32 / self.phase_buckets as f32 * PI;
 
             let wave = FrequencyComponent::new(self.channel_frequency(channel), phase, 1.0);
-            self.commands.send(SoundCommand::AddWaveform(wave));
-
-            // println!("    channel {}: a{:02b} p{:02b}", channel, 0, phase_bucket);
+            self.add(wave);
         }
 
-        self.commands.send(SoundCommand::TransitionVolume(0.1));
+        self.on();
         sleep(self.symbol_duration);
-        self.commands.send(SoundCommand::TransitionVolume(0.0));
+        self.off();
         sleep(self.pause_duration);
     }
 
@@ -120,12 +122,31 @@ impl Encoder {
     fn channel_frequency(&self, bucket: usize) -> f32 {
         (self.base_channel + bucket * self.step) as f32 * self.fbucket
     }
+
+    fn on(&self) {
+        self.commands.send(SoundCommand::TransitionVolume(self.volume));
+    }
+
+    fn off(&self) {
+        self.commands.send(SoundCommand::TransitionVolume(0.0));
+    }
+
+    fn add(&self, wave: FrequencyComponent) {
+        self.commands.send(SoundCommand::AddWaveform(wave));
+    }
+
+    fn clear(&self) {
+        self.commands.send(SoundCommand::ClearWaveform);
+    }
 }
 
 impl Write for Encoder {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.send_calibration();
-        buf.iter().for_each(|v| self.send_symbol(*v as u64));
+        buf
+            .chunks(2)
+            .for_each(|v|
+                self.send_symbol(v.iter().fold(0, |a, &v| (a << 8) + (v as u64))));
         Ok(buf.len())
     }
 

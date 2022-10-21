@@ -146,10 +146,12 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
     println!("real fbucket: {}", fbucket);
 
     let mut decoders = vec![
-        Decoder::new(),
-        Decoder::new(),
-        Decoder::new(),
-        Decoder::new(),
+        Decoder::new(8),
+        Decoder::new(8),
+        Decoder::new(8),
+        Decoder::new(8),
+        Decoder::new(8),
+        Decoder::new(8),
     ];
 
     // std::process::exit(0);
@@ -186,7 +188,7 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
 
                 // println!("{}", fbucket);
 
-                print_frequency_range(fbucket, 400..800, values);
+                print_frequency_range(fbucket, 400..900, values);
                 eprint!("   ");
 
                 let decoded = [
@@ -194,6 +196,8 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
                     decoders[1].sample(&values[16]),
                     decoders[2].sample(&values[18]),
                     decoders[3].sample(&values[20]),
+                    decoders[4].sample(&values[22]),
+                    decoders[5].sample(&values[24]),
                 ];
 
                 if decoded.iter().all(|v| v.is_some()) {
@@ -201,8 +205,9 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
                         .iter()
                         .map(|v| v.unwrap())
                         .rev()
-                        .fold(0, |a, v| (a << 2) + v);
-                    eprint!("{:?} ", char::from_u32(v as u32));
+                        .fold(0, |a, v| (a << 3) + v);
+                    eprint!("({:?} ", char::from_u32(v as u32 & 0xff));
+                    eprint!("{:?}) ", char::from_u32(v as u32 >> 8));
                 }
 
                 decoded.iter().for_each(|v| eprint!("{:?} ", v));

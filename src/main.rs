@@ -58,7 +58,7 @@ fn main() {
     }
 
     if let Some(ref commands) = commands {
-        let mut encoder = Encoder::new(31.25, commands.clone());
+        let mut encoder = Encoder::new(31.25, 8, commands.clone());
 
         write!(
             encoder,
