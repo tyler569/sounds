@@ -64,7 +64,6 @@ impl Decoder {
 
         self.phase_offset = Some(
             mod_sub(self.phase_offset.expect("Set in `sample`"), diff));
-
     }
 
     fn phase_bucket_width(&self) -> f32 {
