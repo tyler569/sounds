@@ -68,8 +68,8 @@ impl SoundGenerator {
             volume_target: 0.1,
             volume_transition: 0.0,
             waveform: vec![
-                FrequencyComponent::new_simple(340.0),
-                FrequencyComponent::new_simple(450.0),
+                // FrequencyComponent::new_simple(340.0),
+                // FrequencyComponent::new_simple(450.0),
             ],
             commands,
         }
@@ -105,7 +105,7 @@ impl SoundGenerator {
                 match command {
                     SoundCommand::TransitionVolume(v) => {
                         self.volume_target = v;
-                        self.volume_transition = 0.02;
+                        self.volume_transition = 0.005;
                     }
                     SoundCommand::SetVolume(v) => self.volume = v,
                     SoundCommand::AddWaveform(w) => self.waveform.push(w),

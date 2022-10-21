@@ -7,7 +7,7 @@ pub struct Decoder {
     amplitude_buckets: usize,
     amplitude_offset: Option<f32>,
 
-    last_samples: Vec<FftPoint>,
+    last_bucket: Option<usize>,
 }
 
 impl Decoder {
@@ -19,7 +19,8 @@ impl Decoder {
             phase_offset: None,
             amplitude_buckets: 1,
             amplitude_offset: None,
-            last_samples: vec![],
+
+            last_bucket: None,
         }
     }
 
@@ -27,6 +28,7 @@ impl Decoder {
     /// frequency and analyze it to find possible sent data.
     pub fn sample(&mut self, point: &FftPoint) -> Option<u64> {
         if point.amplitude < 4.0 {
+            self.last_bucket = None;
             return None
         }
 
@@ -37,7 +39,10 @@ impl Decoder {
         let phase = self.offset_phase(point.phase);
         let bucket = self.phase_find_bucket(phase);
         // eprintln!("point {} offset {:?} phase {} bucket {}", point.phase, self.phase_offset, phase, bucket);
-        self.adjust_phase_offset(phase, bucket);
+        if let Some(true) = self.last_bucket.map(|b| b == bucket) {
+            self.adjust_phase_offset(phase, bucket);
+        }
+        self.last_bucket = Some(bucket);
         Some(bucket as u64)
     }
 
