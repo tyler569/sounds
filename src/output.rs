@@ -1,7 +1,9 @@
-use crate::soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
 use crossbeam::channel;
+
+pub mod soundgen;
+use soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();

@@ -4,12 +4,11 @@
 use clap::Parser;
 use crossbeam::channel;
 use rustyline::error::ReadlineError;
-use soundgen::{FrequencyComponent, SoundCommand};
+use output::soundgen::{FrequencyComponent, SoundCommand};
 use std::{f32::consts::PI, process::exit};
 
 mod listen;
 mod output;
-mod soundgen;
 mod ui;
 
 #[derive(Parser, Debug)]

@@ -1,7 +1,7 @@
 use crossbeam::channel;
 use rustyline::error::ReadlineError;
 
-use crate::soundgen::{FrequencyComponent, SoundCommand};
+use crate::output::soundgen::{FrequencyComponent, SoundCommand};
 
 pub fn ui(snd: channel::Sender<SoundCommand>) {
     loop {
