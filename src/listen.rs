@@ -6,6 +6,9 @@ use cpal::{
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
 
+mod decode;
+use decode::Decoder;
+
 fn to_complexes(f: &[f32], channels: usize) -> Vec<Complex<f32>> {
     f.iter()
         .step_by(channels)
@@ -13,11 +16,11 @@ fn to_complexes(f: &[f32], channels: usize) -> Vec<Complex<f32>> {
         .collect()
 }
 
-struct FftPoint {
-    amplitude: f32,
-    complex: Complex<f32>,
-    frequency: f32,
-    phase: f32, // positive, * 1/PI
+pub struct FftPoint {
+    pub amplitude: f32,
+    pub complex: Complex<f32>,
+    pub frequency: f32,
+    pub phase: f32, // positive, * 1/PI
 }
 
 impl FftPoint {
@@ -141,6 +144,8 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
     let fbucket = config.sample_rate.0 as f32 / 2.0 / (best_buffer / 2) as f32;
     println!("real fbucket: {}", fbucket);
 
+    let mut decoder = Decoder::new();
+
     // std::process::exit(0);
 
     let mut first = true;
@@ -175,7 +180,12 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
 
                 // println!("{}", fbucket);
 
-                print_frequency_range(fbucket, 0..6000, values);
+                // print_frequency_range(fbucket, 0..3000, values);
+
+                let decoded = decoder.sample(&values[14]);
+                println!("{:>8?} {:?}", decoded, decoder.phase_offset());
+
+
             },
             move |err| eprintln!("{:?}", err),
         )
