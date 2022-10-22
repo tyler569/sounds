@@ -4,7 +4,7 @@ use crossbeam::channel::Sender;
 
 use super::soundgen::{FrequencyComponent, SoundCommand};
 
-pub struct Encoder {
+pub struct DifferentialEncoder {
     commands: Sender<SoundCommand>,
 
     fbucket: f32,
@@ -20,11 +20,13 @@ pub struct Encoder {
     pause_duration: Duration,
 
     volume: f64,
+
+    previous_symbol: Vec<u64>,
 }
 
-impl Encoder {
+impl DifferentialEncoder {
     pub fn new(fbucket: f32, phase_buckets: usize, commands: Sender<SoundCommand>) -> Self {
-        let encoder = Self {
+        let mut encoder = Self {
             commands,
 
             fbucket,
@@ -36,13 +38,19 @@ impl Encoder {
             amplitude_buckets: 1,
             phase_buckets,
 
-            symbol_duration: Duration::from_millis(500),
-            pause_duration: Duration::from_millis(50),
+            symbol_duration: Duration::from_millis(200),
+            pause_duration: Duration::from_millis(200),
 
             volume: 0.1,
+
+            previous_symbol: Vec::new(),
         };
 
-        println!("Encoder!");
+        for i in 0..encoder.channels {
+            encoder.previous_symbol.push(0);
+        }
+
+        println!("DifferentialEncoder!");
 
         assert!(encoder.amplitude_buckets.is_power_of_two());
         assert!(encoder.phase_buckets.is_power_of_two());
@@ -69,7 +77,7 @@ impl Encoder {
 
     /// Invariants: when you call this method, the volume is 0 and the quiet
     /// period has already passed.
-    pub fn send_symbol(&self, mut data: u64) {
+    pub fn send_symbol(&mut self, mut data: u64) {
         self.clear();
 
         let bits = self.bits_per_symbol() / self.channels();
@@ -88,13 +96,17 @@ impl Encoder {
             */
 
             let phase_bucket = channel_data;
+            let differential_phase_bucket = (self.previous_symbol[channel] - phase_bucket)
+                .rem_euclid(self.channels as u64);
 
-            assert!(phase_bucket < self.phase_buckets as u64);
+            assert!(differential_phase_bucket < self.phase_buckets as u64);
 
-            let phase = phase_bucket as f32 / self.phase_buckets as f32 * PI;
+            let phase = differential_phase_bucket as f32 / self.phase_buckets as f32 * PI;
 
             let wave = FrequencyComponent::new(self.channel_frequency(channel), phase, 1.0);
             self.add(wave);
+
+            self.previous_symbol[channel] = differential_phase_bucket;
         }
 
         self.on();
@@ -140,7 +152,7 @@ impl Encoder {
     }
 }
 
-impl Write for Encoder {
+impl Write for DifferentialEncoder {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.send_calibration();
         // buf

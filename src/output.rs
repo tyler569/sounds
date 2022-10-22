@@ -5,6 +5,7 @@ use crossbeam::channel;
 pub mod soundgen;
 use soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 
+pub mod differential_encode;
 pub mod encode;
 
 fn make_device_and_config() -> (Device, StreamConfig) {

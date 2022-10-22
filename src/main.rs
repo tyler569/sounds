@@ -4,11 +4,12 @@
 use clap::Parser;
 use crossbeam::channel;
 use output::{
+    differential_encode::DifferentialEncoder,
     encode::Encoder,
     soundgen::{FrequencyComponent, SoundCommand},
 };
 use rustyline::error::ReadlineError;
-use std::{f32::consts::PI, io::Write, process::exit};
+use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Duration};
 
 mod listen;
 mod output;
@@ -58,16 +59,10 @@ fn main() {
     }
 
     if let Some(ref commands) = commands {
-        let mut encoder = Encoder::new(31.25, 8, commands.clone());
+        let mut encoder = DifferentialEncoder::new(31.25, 4, commands.clone());
 
-        write!(
-            encoder,
-            "{}",
-            "Hello World".chars().cycle().take(1000).collect::<String>()
-        );
+        write!(encoder, "Hello World");
     }
 
-    if !args.ui && false {
-        std::thread::sleep(std::time::Duration::from_secs(10000));
-    }
+    sleep(Duration::from_secs(1000));
 }

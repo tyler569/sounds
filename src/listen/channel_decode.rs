@@ -1,6 +1,8 @@
 use crate::listen::FftPoint;
 
-pub struct Decoder {
+use super::Decoder;
+
+pub struct ChannelDecoder {
     phase_buckets: usize,
     phase_offset: Option<f32>,
 
@@ -11,7 +13,7 @@ pub struct Decoder {
     seen: usize,
 }
 
-impl Decoder {
+impl ChannelDecoder {
     const PHASE_SPECTRUM: f32 = 1.0;
 
     pub fn new(phase_buckets: usize) -> Self {
@@ -24,34 +26,6 @@ impl Decoder {
             last_bucket: None,
             seen: 0,
         }
-    }
-
-    /// Take a point in the FFT spectruc corresponding to a particular
-    /// frequency and analyze it to find possible sent data.
-    pub fn sample(&mut self, point: &FftPoint) -> Option<u64> {
-        if point.amplitude < 4.0 {
-            self.last_bucket = None;
-            return None;
-        }
-
-        self.seen += 1;
-        if self.seen == 1 {
-            // discard the first sample
-            return None;
-        }
-
-        if self.phase_offset.is_none() {
-            self.phase_offset = Some(mod_sub(1.0, point.phase));
-        }
-
-        let phase = self.offset_phase(point.phase);
-        let bucket = self.phase_find_bucket(phase);
-        // eprintln!("point {} offset {:?} phase {} bucket {}", point.phase, self.phase_offset, phase, bucket);
-        if let Some(true) = self.last_bucket.map(|b| b == bucket) {
-            self.adjust_phase_offset(phase, bucket);
-        }
-        self.last_bucket = Some(bucket);
-        Some(bucket as u64)
     }
 
     /// Getter for phase_offset so I can visualize it outside this module
@@ -101,8 +75,38 @@ impl Decoder {
     }
 }
 
+impl Decoder for ChannelDecoder {
+    /// Take a point in the FFT spectruc corresponding to a particular
+    /// frequency and analyze it to find possible sent data.
+    fn sample(&mut self, point: &FftPoint) -> Option<u64> {
+        if point.amplitude < 15.0 {
+            self.last_bucket = None;
+            return None;
+        }
+
+        self.seen += 1;
+        if self.seen == 1 {
+            // discard the first sample
+            return None;
+        }
+
+        if self.phase_offset.is_none() {
+            self.phase_offset = Some(mod_sub(1.0, point.phase));
+        }
+
+        let phase = self.offset_phase(point.phase);
+        let bucket = self.phase_find_bucket(phase);
+        // eprintln!("point {} offset {:?} phase {} bucket {}", point.phase, self.phase_offset, phase, bucket);
+        if let Some(true) = self.last_bucket.map(|b| b == bucket) {
+            self.adjust_phase_offset(phase, bucket);
+        }
+        self.last_bucket = Some(bucket);
+        Some(bucket as u64)
+    }
+}
+
 fn mod_add(a: f32, b: f32) -> f32 {
-    (a + b).rem_euclid(Decoder::PHASE_SPECTRUM)
+    (a + b).rem_euclid(ChannelDecoder::PHASE_SPECTRUM)
 }
 
 fn mod_sub(a: f32, b: f32) -> f32 {
