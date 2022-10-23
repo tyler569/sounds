@@ -8,6 +8,8 @@ use soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 pub mod differential_encode;
 pub mod encode;
 
+mod tonegen;
+
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();
     let device = host.default_output_device().expect("No output available");

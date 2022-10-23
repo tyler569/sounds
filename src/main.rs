@@ -13,6 +13,7 @@ use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Durati
 
 mod listen;
 mod output;
+mod traits;
 mod ui;
 
 #[derive(Parser, Debug)]
