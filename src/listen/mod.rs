@@ -13,6 +13,7 @@ mod fftpoint;
 use fftpoint::FftPoint;
 
 use crate::listen::differential_decode::DifferentialDecoder;
+use crate::fft::FftDecoder;
 
 trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;
@@ -23,19 +24,6 @@ fn to_complexes(f: &[f32], channels: usize) -> Vec<Complex<f32>> {
         .step_by(channels)
         .map(|v| Complex::new(*v, 0.0))
         .collect()
-}
-
-fn print_frequency_range(fbucket: f32, f: Range<usize>, values: &[FftPoint]) {
-    let bottom = (f.start as f32 / fbucket) as usize;
-    let len = ((f.end - f.start) as f32 / fbucket) as usize;
-
-    eprint!("[");
-    values
-        .iter()
-        .skip(bottom)
-        .take(len)
-        .for_each(|v| eprint!("{}", v));
-    eprint!("]");
 }
 
 pub fn listen(target_fbucket: f32) -> (Stream, f32) {
@@ -79,59 +67,32 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
         .build_input_stream(
             &config,
             move |samples: &[f32], info: &cpal::InputCallbackInfo| {
-                let mut planner = FftPlanner::<f32>::new();
-                let mut buffer = to_complexes(samples, config.channels.into());
-                let fft = planner.plan_fft_forward(buffer.len());
+                let fft = FftDecoder::perform(sample_rate, samples);
 
-                fft.process(&mut buffer);
-
-                let values = &buffer[0..buffer.len() / 2]
-                    .iter()
-                    .enumerate()
-                    .map(|(i, &v)| FftPoint::new(fbucket, (i, v)))
-                    .collect::<Vec<_>>();
-
-                let peak = values
-                    .iter()
-                    .max_by_key(|v| (v.amplitude * 100000.) as i64)
-                    .unwrap();
-
-                // for i in 13..17 {
-                //     print!("{:?} ", values[i]);
-                // }
-                // println!();
-                // println!("{:#?}", values[14]);
-                // println!("{:#?}", peak);
-
-                // println!("{}", fbucket);
-
-                print_frequency_range(fbucket, 400..800, values);
-                eprint!("   ");
-
-                // let decoded = decoder.sample(&values[14]);
-                // eprintln!("{:?}", decoded);
-                
-                let decoded = [
-                    decoders[0].sample(&values[14]),
-                    decoders[1].sample(&values[16]),
-                    decoders[2].sample(&values[18]),
-                    decoders[3].sample(&values[20]),
-                ];
-
-                if decoded.iter().all(|v| v.is_some()) {
-                    let v = decoded
-                        .iter()
-                        .map(|v| v.unwrap())
-                        .rev()
-                        .fold(0, |a, v| (a << 2) + v);
-                    eprint!("({:>7?}) ", char::from_u32(v as u32).unwrap());
-                    // eprint!("{:?}) ", char::from_u32(v as u32 >> 8));
-                } else {
-                    eprint!{"          "}
-                }
-
-                decoded.iter().for_each(|v| eprint!("{:?} ", v));
+                fft.print_frequency_range(400..800);
                 eprintln!();
+                
+                // let decoded = [
+                //     decoders[0].sample(&values[14]),
+                //     decoders[1].sample(&values[16]),
+                //     decoders[2].sample(&values[18]),
+                //     decoders[3].sample(&values[20]),
+                // ];
+
+                // if decoded.iter().all(|v| v.is_some()) {
+                //     let v = decoded
+                //         .iter()
+                //         .map(|v| v.unwrap())
+                //         .rev()
+                //         .fold(0, |a, v| (a << 2) + v);
+                //     eprint!("({:>7?}) ", char::from_u32(v as u32).unwrap());
+                //     // eprint!("{:?}) ", char::from_u32(v as u32 >> 8));
+                // } else {
+                //     eprint!{"          "}
+                // }
+
+                // decoded.iter().for_each(|v| eprint!("{:?} ", v));
+                // eprintln!();
             },
             move |err| eprintln!("{:?}", err),
         )

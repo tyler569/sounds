@@ -6,11 +6,12 @@ use crossbeam::channel;
 use output::{
     differential_encode::DifferentialEncoder,
     encode::Encoder,
-    soundgen::{FrequencyComponent, SoundCommand},
+    soundgen::{FrequencyComponent, SoundCommand, SoundGenerator},
 };
 use rustyline::error::ReadlineError;
 use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Duration};
 
+mod fft;
 mod listen;
 mod output;
 mod traits;

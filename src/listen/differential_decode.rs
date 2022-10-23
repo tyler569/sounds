@@ -2,7 +2,6 @@ use super::{FftPoint, Decoder};
 
 pub struct DifferentialDecoder {
     phase_buckets: usize,
-
     last_phase: Option<f32>,
     in_a_row: usize,
 }
@@ -13,8 +12,8 @@ impl DifferentialDecoder {
     pub fn new(phase_buckets: usize) -> Self {
         Self {
             phase_buckets,
-            in_a_row: 0,
             last_phase: None,
+            in_a_row: 0,
         }
     }
 
@@ -49,10 +48,9 @@ impl Decoder for DifferentialDecoder {
         }
 
         let mut dphase = 0.0;
-        if let Some(phase) = self.last_phase {
-            dphase = mod_sub(phase, point.phase);
+        if let Some(last_phase) = self.last_phase {
+            dphase = mod_sub(last_phase, point.phase);
         }
-
         self.last_phase = Some(point.phase);
 
         Some(self.phase_find_bucket(dphase))
@@ -65,4 +63,10 @@ fn mod_add(a: f32, b: f32) -> f32 {
 
 fn mod_sub(a: f32, b: f32) -> f32 {
     mod_add(a, -b)
+}
+
+fn mod_aeq(a: f32, b: f32) -> bool {
+    let epsilon = 0.01;
+    let diff = mod_sub(a, b);
+    diff > 1.0 - epsilon || diff < epsilon
 }
