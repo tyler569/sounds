@@ -124,7 +124,8 @@ impl Encoder {
     }
 
     fn on(&self) {
-        self.commands.send(SoundCommand::TransitionVolume(self.volume));
+        self.commands
+            .send(SoundCommand::TransitionVolume(self.volume));
     }
 
     fn off(&self) {

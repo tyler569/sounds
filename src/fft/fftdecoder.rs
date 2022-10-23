@@ -1,8 +1,8 @@
 use std::ops::Range;
 
+use super::FftPoint;
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
-use super::FftPoint;
 
 pub struct FftDecoder {
     complexes: Vec<Complex<f32>>,
@@ -11,7 +11,8 @@ pub struct FftDecoder {
 
 impl FftDecoder {
     pub fn perform(sample_rate: f32, buffer: &[f32]) -> Self {
-        let mut complexes: Vec<Complex<f32>> = buffer.iter().map(|&b| Complex::new(b, 0.0)).collect();
+        let mut complexes: Vec<Complex<f32>> =
+            buffer.iter().map(|&b| Complex::new(b, 0.0)).collect();
 
         let mut planner = FftPlanner::<f32>::new();
         let fft = planner.plan_fft_forward(complexes.len());
@@ -22,7 +23,7 @@ impl FftDecoder {
             sample_rate,
         }
     }
-    
+
     pub fn fbucket(&self) -> f32 {
         self.sample_rate / self.complexes.len() as f32
     }
@@ -40,7 +41,9 @@ impl FftDecoder {
     }
 
     pub fn frequencies(&self) -> impl Iterator<Item = f32> + '_ {
-        (0..self.positive_len()).into_iter().map(|i| self.frequency(i))
+        (0..self.positive_len())
+            .into_iter()
+            .map(|i| self.frequency(i))
     }
 
     pub fn point(&self, index: usize) -> FftPoint {

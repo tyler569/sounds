@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::traits::{SoundRead, Result};
+use crate::traits::{Result, SoundRead};
 
 struct Tone {
     frequency: f64,
@@ -12,15 +12,14 @@ struct ToneGen {
     sample_clock: f64,
     sample_rate: f64,
     volume: f64,
-    tones: Vec<Tone>
+    tones: Vec<Tone>,
 }
 
 impl ToneGen {
     fn tone_sample(&self, tone: &Tone) -> f32 {
         ((self.sample_clock * tone.frequency * 2.0 * PI / self.sample_rate + tone.phase * 2.0 * PI)
-            .sin() *
-            tone.amplitude)
-            as f32
+            .sin()
+            * tone.amplitude) as f32
     }
 
     fn amplitude_sum(&self) -> f32 {

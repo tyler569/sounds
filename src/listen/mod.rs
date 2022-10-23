@@ -9,8 +9,8 @@ use std::{f32::consts::PI, ops::Range};
 mod channel_decode;
 mod differential_decode;
 
-use crate::listen::differential_decode::DifferentialDecoder;
 use crate::fft::{FftDecoder, FftPoint};
+use crate::listen::differential_decode::DifferentialDecoder;
 
 trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;
@@ -58,7 +58,7 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
 
                 fft.print_frequency_range(400..800);
                 eprintln!();
-                
+
                 // let decoded = [
                 //     decoders[0].sample(&values[14]),
                 //     decoders[1].sample(&values[16]),

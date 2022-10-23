@@ -1,4 +1,4 @@
-use super::{FftPoint, Decoder};
+use super::{Decoder, FftPoint};
 
 pub struct DifferentialDecoder {
     phase_buckets: usize,
@@ -20,7 +20,7 @@ impl DifferentialDecoder {
     pub fn is_signal(&mut self, point: &FftPoint) -> bool {
         if point.amplitude < 4.0 {
             self.in_a_row = 0;
-            return false
+            return false;
         }
 
         self.in_a_row += 1;
@@ -44,7 +44,7 @@ impl DifferentialDecoder {
 impl Decoder for DifferentialDecoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64> {
         if !self.is_signal(point) {
-            return None
+            return None;
         }
 
         let mut dphase = 0.0;

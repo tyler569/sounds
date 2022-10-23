@@ -96,8 +96,8 @@ impl DifferentialEncoder {
             */
 
             let phase_bucket = channel_data;
-            let differential_phase_bucket = (self.previous_symbol[channel] - phase_bucket)
-                .rem_euclid(self.channels as u64);
+            let differential_phase_bucket =
+                (self.previous_symbol[channel] - phase_bucket).rem_euclid(self.channels as u64);
 
             assert!(differential_phase_bucket < self.phase_buckets as u64);
 
@@ -136,7 +136,8 @@ impl DifferentialEncoder {
     }
 
     fn on(&self) {
-        self.commands.send(SoundCommand::TransitionVolume(self.volume));
+        self.commands
+            .send(SoundCommand::TransitionVolume(self.volume));
     }
 
     fn off(&self) {

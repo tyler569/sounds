@@ -31,7 +31,7 @@ impl RingBuf {
         if self.end < self.begin {
             let count = min(Self::SIZE - self.begin, buffer.len());
         }
-        
+
         if self.begin < self.end {
             buffer.copy_from_slice(&self.data[self.begin..])
         }
