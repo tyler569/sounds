@@ -1,6 +1,6 @@
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    BufferSize, InputStreamTimestamp, Stream,
+    BufferSize, InputStreamTimestamp, Stream, StreamConfig,
 };
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
@@ -8,31 +8,16 @@ use std::{f32::consts::PI, ops::Range};
 
 mod channel_decode;
 mod differential_decode;
-mod fftpoint;
-
-use fftpoint::FftPoint;
 
 use crate::listen::differential_decode::DifferentialDecoder;
-use crate::fft::FftDecoder;
+use crate::fft::{FftDecoder, FftPoint};
 
 trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;
 }
 
-fn to_complexes(f: &[f32], channels: usize) -> Vec<Complex<f32>> {
-    f.iter()
-        .step_by(channels)
-        .map(|v| Complex::new(*v, 0.0))
-        .collect()
-}
-
-pub fn listen(target_fbucket: f32) -> (Stream, f32) {
-    let host = cpal::default_host();
-    let device = host.default_input_device().unwrap();
-
-    let mut config = device.default_input_config().unwrap().config();
+fn choose_buffer_size(config: &StreamConfig, target_fbucket: f32) -> u32 {
     let sample_rate = config.sample_rate.0 as f32;
-
     let possible_fbuckets = (0..18).map(|v| sample_rate / 2.0 / ((2.0).powf(v as f32)));
 
     println!(
@@ -46,20 +31,22 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
         .map(|(i, _)| 2u32.pow(i as u32 + 1))
         .unwrap();
 
+    best_buffer
+}
+
+pub fn listen(target_fbucket: f32) -> (Stream, f32) {
+    let host = cpal::default_host();
+    let device = host.default_input_device().unwrap();
+
+    let mut config = device.default_input_config().unwrap().config();
+    let sample_rate = config.sample_rate.0 as f32;
+
+    let best_buffer = choose_buffer_size(&config, target_fbucket);
     config.buffer_size = BufferSize::Fixed(best_buffer);
-
     println!("{:?}", config);
-    let fbucket = config.sample_rate.0 as f32 / 2.0 / (best_buffer / 2) as f32;
+
+    let fbucket = sample_rate / 2.0 / (best_buffer / 2) as f32;
     println!("real fbucket: {}", fbucket);
-
-    let mut decoders = vec![
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-    ];
-
-    // std::process::exit(0);
 
     let mut first = true;
 
@@ -86,7 +73,6 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
                 //         .rev()
                 //         .fold(0, |a, v| (a << 2) + v);
                 //     eprint!("({:>7?}) ", char::from_u32(v as u32).unwrap());
-                //     // eprint!("{:?}) ", char::from_u32(v as u32 >> 8));
                 // } else {
                 //     eprint!{"          "}
                 // }
