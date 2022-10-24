@@ -50,35 +50,34 @@ impl DataDecoder {
             decoded.push(self.decoders[i].sample(&fft.point(c)))
         );
 
-        eprint!(" {:?}", decoded);
+        // eprint!(" {:?}", decoded);
 
-        let mut decoded = decoded.iter().enumerate().map(|(i, v)| {
-            match v {
-                DecodeResult::Noise => {
-                    self.cache[i] = None;
+        let symbol = decoded
+            .iter()
+            .enumerate()
+            .map(|(i, v)| {
+                match v {
+                    DecodeResult::Noise => {
+                        self.cache[i] = None;
+                        None
+                    }
+                    DecodeResult::Signal(v) => {
+                        self.cache[i] = Some(*v);
+                        self.cache[i]
+                    }
+                    DecodeResult::SameSignal => {
+                        self.cache[i]
+                    }
+                }
+            })
+            .rev()
+            .fold(Some(0), |a, v| {
+                if a.is_some() && v.is_some() {
+                    Some((a.unwrap() << self.config.bits_per_channel()) + v.unwrap())
+                } else {
                     None
                 }
-                DecodeResult::Signal(v) => {
-                    self.cache[i] = Some(*v);
-                    self.cache[i]
-                }
-                DecodeResult::SameSignal => {
-                    self.cache[i]
-                }
-            }
-        }).collect::<Vec<_>>();
-
-        eprint!(" {:?}", decoded);
-
-        let symbol = if decoded.iter().all(|v| v.is_some()) {
-            Some(decoded
-                .iter()
-                .map(|v| v.unwrap())
-                .rev()
-                .fold(0, |a, v| (a << 2) + v))
-        } else {
-            None
-        };
+            });
 
         if symbol.is_none() {
             self.last_symbol = None;
@@ -90,6 +89,8 @@ impl DataDecoder {
             self.last_symbol = symbol;
             symbol
         };
+
+        eprintln!(" {:?}", u.and_then(|v| char::from_u32(v as u32)));
 
         u.and_then(|v| char::from_u32(v as u32))
     }

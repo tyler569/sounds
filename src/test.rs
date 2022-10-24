@@ -74,4 +74,25 @@ fn test_hf_encode_and_decode() {
     test_encode_and_decode(config, 512);
 }
 
+#[test]
+fn fuzz_hf_encode_and_decode_settings() {
+    for base in (160..240).step_by(10) {
+        let config = ChannelConfig {
+            channel_base: base,
+            channel_step: 2,
+            channels: 4,
+
+            symbol_duration: Duration::from_millis(50),
+            pause_duration: Duration::from_millis(50),
+
+            phase_bits: 2,
+            amplitude_bits: 0,
+
+            volume: 0.25,
+        };
+
+        test_encode_and_decode(config, 512);
+    }
+}
+
 

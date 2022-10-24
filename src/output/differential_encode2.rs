@@ -205,7 +205,6 @@ impl DifferentialEncoder2 {
 
             self.previous_symbol[channel] = differential_phase_bucket;
         }
-        // eprintln!(")");
 
         self.on(self.symbol_duration());
         self.off(self.pause_duration());
@@ -229,7 +228,7 @@ impl DifferentialEncoder2 {
         let iter = data.iter().flat_map(|&v| to_bit_vector(v)).collect::<Vec<bool>>();
         
         for v in iter.chunks(self.bits_per_symbol() as usize) {
-            eprintln!("sending symbol: {:?} {:08b}", v, to_int(v));
+            // eprintln!("sending symbol: {:?} {:08b}", v, to_int(v));
             self.send_symbol(to_int(v));
         }
     }

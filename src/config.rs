@@ -52,4 +52,11 @@ impl ChannelConfig {
         self.channel_base - 2 .. self.channel_top() + 1
     }
     
+    pub fn bits_per_channel(&self) -> u32 {
+        self.phase_bits + self.amplitude_bits
+    }
+
+    pub fn bits_per_symbol(&self) -> u32 {
+        self.bits_per_channel() * self.channels as u32
+    }
 }
