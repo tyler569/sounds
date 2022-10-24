@@ -31,7 +31,7 @@ fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
     let mut buffer = vec![0.0; buffer_len];
     let fbucket = fbucket(sample_rate, buffer_len);
 
-    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, config);
+    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, fbucket, config);
     encoder.send_calibration();
     encoder.write(b"Hello World");
 
@@ -52,21 +52,12 @@ fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
 
 #[test]
 fn test_lf_encode_and_decode() {
-    let sample_rate: f32 = 48000.0;
-    let buffer_len = 2048;
-    let fbucket = fbucket(sample_rate, buffer_len);
-    test_encode_and_decode(ChannelConfig::new(fbucket), buffer_len);
+    test_encode_and_decode(ChannelConfig::new(), 2048);
 }
 
 #[test]
 fn test_hf_encode_and_decode() {
-    let sample_rate: f32 = 48000.0;
-    let buffer_len = 512;
-    let fbucket = fbucket(sample_rate, buffer_len);
-
     let config = ChannelConfig {
-        fbucket,
-        
         channel_base: 160, /* ~ 15kHz */
         channel_step: 2,
         channels: 4,
@@ -80,7 +71,7 @@ fn test_hf_encode_and_decode() {
         volume: 0.25,
     };
 
-    test_encode_and_decode(config, buffer_len);
+    test_encode_and_decode(config, 512);
 }
 
 

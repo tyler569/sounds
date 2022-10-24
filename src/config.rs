@@ -2,8 +2,6 @@ use std::{time::Duration, ops::{Range, RangeInclusive}};
 
 #[derive(Copy, Clone, Debug)]
 pub struct ChannelConfig {
-    pub fbucket: f32,
-
     pub channel_base: usize,
     pub channel_step: usize,
     pub channels: usize,
@@ -18,10 +16,8 @@ pub struct ChannelConfig {
 }
 
 impl ChannelConfig {
-    pub fn new(fbucket: f32) -> Self {
+    pub fn new() -> Self {
         Self {
-            fbucket,
-
             channel_base: 14,
             channel_step: 2,
             channels: 4,
@@ -34,10 +30,6 @@ impl ChannelConfig {
 
             volume: 0.1,
         }
-    }
-
-    pub fn fbucket64(&self) -> f64 {
-        self.fbucket.into()
     }
 
     pub fn phase_buckets(&self) -> usize {
@@ -56,16 +48,8 @@ impl ChannelConfig {
         (self.channel_base..self.channel_top()).step_by(self.channel_step)
     }
 
-    pub fn channel_frequency(&self, channel: usize) -> f32 {
-        self.fbucket * channel as f32 
+    pub fn channels_range(&self) -> Range<usize> {
+        self.channel_base - 1 .. self.channel_top() + 2
     }
-
-    pub fn channel_frequencies(&self) -> Range<f32> {
-        self.channel_frequency(self.channel_base - 1) .. self.channel_frequency(self.channel_top() + 2)
-    }
-
-    pub fn channel_frequencies_usize(&self) -> Range<usize> {
-        let r = self.channel_frequencies();
-        r.start as usize .. r.end as usize
-    }
+    
 }

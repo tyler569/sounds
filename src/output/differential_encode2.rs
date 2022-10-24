@@ -14,6 +14,8 @@ struct TimedCommand {
 }
 
 pub struct DifferentialEncoder2 {
+    fbucket: f32,
+
     channel_config: ChannelConfig,
 
     previous_symbol: Vec<u64>,
@@ -36,7 +38,9 @@ pub struct DifferentialEncoder2 {
 impl DifferentialEncoder2 {
     pub fn new(sample_rate: f64, fbucket: f32) -> Self {
         let mut encoder = Self {
-            channel_config: ChannelConfig::new(fbucket),
+            fbucket,
+
+            channel_config: ChannelConfig::new(),
 
             previous_symbol: Vec::new(),
 
@@ -62,8 +66,10 @@ impl DifferentialEncoder2 {
         encoder
     }
 
-    pub fn new_config(sample_rate: f64, config: ChannelConfig) -> Self {
+    pub fn new_config(sample_rate: f64, fbucket: f32, config: ChannelConfig) -> Self {
         let mut encoder = Self {
+            fbucket,
+
             channel_config: config,
 
             previous_symbol: Vec::new(),
@@ -146,10 +152,6 @@ impl DifferentialEncoder2 {
         self.channel_config.pause_duration
     }
 
-    fn fbucket(&self) -> f32 {
-        self.channel_config.fbucket
-    }
-
     // Taken from DifferentialEncoder
 
     pub fn send_calibration(&mut self) {
@@ -226,7 +228,7 @@ impl DifferentialEncoder2 {
     }
 
     fn channel_frequency(&self, bucket: usize) -> f32 {
-        (self.base() + bucket * self.step()) as f32 * self.fbucket()
+        (self.base() + bucket * self.step()) as f32 * self.fbucket
     }
 
     fn on(&mut self, duration: Duration) {
