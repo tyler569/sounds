@@ -155,7 +155,7 @@ impl DifferentialEncoder {
 
 impl Write for DifferentialEncoder {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.send_calibration();
+        // self.send_calibration();
         // buf
         //     .chunks(2)
         //     .for_each(|v|

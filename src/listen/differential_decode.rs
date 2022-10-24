@@ -18,7 +18,7 @@ impl DifferentialDecoder {
     }
 
     pub fn is_signal(&mut self, point: &FftPoint) -> bool {
-        if point.amplitude < 4.0 {
+        if point.amplitude < 10.0 {
             self.in_a_row = 0;
             return false;
         }

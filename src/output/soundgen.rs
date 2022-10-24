@@ -3,11 +3,13 @@ use std::f64::consts::PI;
 use cpal::StreamConfig;
 use crossbeam::channel::Receiver;
 
-#[derive(Debug)]
+use crate::traits::{Result, SoundRead};
+
+#[derive(Debug, Copy, Clone)]
 pub struct FrequencyComponent {
-    frequency: f64,
-    phase: f64,
-    relative_volume: f64,
+    pub(super) frequency: f64,
+    pub(super) phase: f64,
+    pub(super) relative_volume: f64,
 }
 
 impl FrequencyComponent {
@@ -36,7 +38,7 @@ impl FrequencyComponent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum SoundCommand {
     SetVolume(f64),
     TransitionVolume(f64),
@@ -67,10 +69,7 @@ impl SoundGenerator {
             volume: 0.1,
             volume_target: 0.1,
             volume_transition: 0.0,
-            waveform: vec![
-                // FrequencyComponent::new_simple(340.0),
-                // FrequencyComponent::new_simple(450.0),
-            ],
+            waveform: vec![],
             commands,
         }
     }
@@ -80,10 +79,14 @@ impl SoundGenerator {
             .push(FrequencyComponent::new_simple(frequency));
     }
 
+    pub fn push(&mut self, c: FrequencyComponent) {
+        self.waveform.push(c);
+    }
+
     fn sample(&self, waveform: &[FrequencyComponent]) -> f64 {
         let total_volume: f64 = waveform.iter().map(|w| w.relative_volume).sum();
         if total_volume == 0.0 {
-            return 0.0
+            return 0.0;
         }
 
         let sample_single = |w: &FrequencyComponent| -> f64 {
@@ -138,5 +141,12 @@ impl SoundGenerator {
         }
 
         (raw_sample * self.volume) as f32
+    }
+}
+
+impl SoundRead for SoundGenerator {
+    fn read(&mut self, buffer: &mut [f32]) -> Result<usize> {
+        buffer.iter_mut().for_each(|v| *v = self.tick());
+        Ok(buffer.len())
     }
 }

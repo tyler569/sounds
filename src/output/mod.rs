@@ -5,10 +5,10 @@ use crossbeam::channel;
 pub mod soundgen;
 use soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 
+mod command;
 pub mod differential_encode;
+pub mod differential_encode2;
 pub mod encode;
-
-mod tonegen;
 
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();

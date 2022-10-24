@@ -17,6 +17,9 @@ mod output;
 mod traits;
 mod ui;
 
+#[cfg(test)]
+mod test;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {

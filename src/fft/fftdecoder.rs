@@ -50,6 +50,19 @@ impl FftDecoder {
         FftPoint::new(self.frequency(index), self.complexes[index])
     }
 
+    pub fn peak(&self) -> FftPoint {
+        let peak_index = self
+            .complexes
+            .iter()
+            .take(self.positive_len())
+            .enumerate()
+            .max_by_key(|(i, &v)| (v.abs() * 1000000.0) as u64)
+            .unwrap()
+            .0;
+
+        self.point(peak_index)
+    }
+
     pub fn print_frequency_range(&self, f: Range<usize>) {
         let bottom = (f.start as f32 / self.fbucket()) as usize;
         let len = ((f.end - f.start) as f32 / self.fbucket()) as usize;

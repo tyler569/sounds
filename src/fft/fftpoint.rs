@@ -2,6 +2,7 @@ use num_complex::{Complex, ComplexFloat};
 use std::f32::consts::PI;
 use std::fmt::{Debug, Display, Formatter, Result};
 
+#[derive(Copy, Clone, PartialEq)]
 pub struct FftPoint {
     pub amplitude: f32,
     pub complex: Complex<f32>,

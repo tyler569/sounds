@@ -7,12 +7,12 @@ use rustfft::FftPlanner;
 use std::{f32::consts::PI, ops::Range};
 
 mod channel_decode;
-mod differential_decode;
+pub mod differential_decode;
 
 use crate::fft::{FftDecoder, FftPoint};
 use crate::listen::differential_decode::DifferentialDecoder;
 
-trait Decoder {
+pub trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;
 }
 
