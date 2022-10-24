@@ -31,6 +31,8 @@ impl DataDecoder {
         let fft = FftDecoder::perform(sample_rate, buffer);
         let mut decoded = Vec::with_capacity(self.decoders.len());
 
+        fft.print_frequency_range(self.config.channel_frequencies_usize());
+
         self.config.channels().enumerate().for_each(|(i, c)|
             decoded.push(self.decoders[i].sample(&fft.point(c)))
         );
@@ -43,8 +45,10 @@ impl DataDecoder {
                 .map(|v| v.unwrap())
                 .rev()
                 .fold(0, |a, v| (a << 2) + v);
+            eprintln!(" {:?}", char::from_u32(v as u32).unwrap());
             Some(char::from_u32(v as u32).unwrap())
         } else {
+            eprintln!();
             None
         }
     }

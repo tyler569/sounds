@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{time::Duration, ops::{Range, RangeInclusive}};
 
 #[derive(Copy, Clone, Debug)]
 pub struct ChannelConfig {
@@ -54,5 +54,18 @@ impl ChannelConfig {
 
     pub fn channels(&self) -> impl Iterator<Item = usize> + '_ {
         (self.channel_base..self.channel_top()).step_by(self.channel_step)
+    }
+
+    pub fn channel_frequency(&self, channel: usize) -> f32 {
+        self.fbucket * channel as f32 
+    }
+
+    pub fn channel_frequencies(&self) -> Range<f32> {
+        self.channel_frequency(self.channel_base - 1) .. self.channel_frequency(self.channel_top() + 2)
+    }
+
+    pub fn channel_frequencies_usize(&self) -> Range<usize> {
+        let r = self.channel_frequencies();
+        r.start as usize .. r.end as usize
     }
 }
