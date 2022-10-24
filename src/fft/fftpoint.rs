@@ -6,12 +6,12 @@ use std::fmt::{Debug, Display, Formatter, Result};
 pub struct FftPoint {
     pub amplitude: f32,
     pub complex: Complex<f32>,
-    pub frequency: f32,
+    pub channel: usize,
     pub phase: f32, // positive, * 1/PI
 }
 
 impl FftPoint {
-    pub fn new(frequency: f32, value: Complex<f32>) -> Self {
+    pub fn new(channel: usize, value: Complex<f32>) -> Self {
         let mut phase = 0.0;
         let amplitude = value.abs();
 
@@ -25,7 +25,7 @@ impl FftPoint {
         Self {
             complex: value,
             amplitude,
-            frequency,
+            channel,
             phase,
         }
     }
@@ -51,14 +51,14 @@ impl Debug for FftPoint {
         if f.alternate() {
             write!(
                 f,
-                "Frequency: {:9.2} Phase: {:5.3} Amplitude: {:6.3}",
-                self.frequency, self.phase, self.amplitude
+                "Channel: {:9.2} Phase: {:5.3} Amplitude: {:6.3}",
+                self.channel, self.phase, self.amplitude
             )
         } else {
             write!(
                 f,
                 "f:{:.2} p:{:.3} a:{:.3}",
-                self.frequency, self.phase, self.amplitude
+                self.channel, self.phase, self.amplitude
             )
         }
     }

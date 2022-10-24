@@ -53,9 +53,9 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
         .build_input_stream(
             &config,
             move |samples: &[f32], info: &cpal::InputCallbackInfo| {
-                let fft = FftDecoder::perform(sample_rate, samples);
+                let fft = FftDecoder::perform(samples);
 
-                fft.print_frequency_range(400..800);
+                fft.print_channel_range(12..22);
                 eprintln!();
 
                 // let decoded = [

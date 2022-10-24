@@ -1,35 +1,31 @@
 use std::collections::btree_set::SymmetricDifference;
 
-use crate::{config::ChannelConfig, fft::FftDecoder, listen::Decoder};
+use crate::{config::ChannelConfig, fft::FftDecoder, listen::Decoder, traits::SoundWrite};
 
 use super::differential_decode::{DifferentialDecoder, DecodeResult};
 
 pub struct DataDecoder {
     config: ChannelConfig,
-
     decoders: Vec<DifferentialDecoder>,
-
     cache: Vec<Option<u64>>,
-
     last_symbol: Option<u64>,
 
     acc: u64,
     bits_in_acc: usize,
+    unread_data: Vec<u8>,
 }
 
 impl DataDecoder {
     pub fn new(config: ChannelConfig) -> Self {
         let mut s = Self {
             config,
-
             decoders: Vec::new(),
-
             cache: Vec::new(),
-
             last_symbol: None,
 
             acc: 0,
             bits_in_acc: 0,
+            unread_data: Vec::new(),
         };
 
         for i in s.config.channels() {
@@ -64,8 +60,8 @@ impl DataDecoder {
         }
     }
 
-    pub fn sample(&mut self, sample_rate: f32, buffer: &[f32]) -> Option<char> {
-        let fft = FftDecoder::perform(sample_rate, buffer);
+    pub fn sample(&mut self, buffer: &[f32]) -> Option<u64> {
+        let fft = FftDecoder::perform(buffer);
         let mut decoded = Vec::with_capacity(self.decoders.len());
 
         fft.print_channel_range(self.config.channels_range());
@@ -89,15 +85,29 @@ impl DataDecoder {
             self.last_symbol = None;
         }
 
-        let result = if symbol == self.last_symbol {
+        eprintln!(" {:?}", symbol);
+
+        if symbol == self.last_symbol {
             None
         } else {
             self.last_symbol = symbol;
             symbol
-        };
+        }
+    }
+}
+        
 
-        eprintln!(" {:?}", result.and_then(|v| char::from_u32(v as u32)));
+impl SoundWrite for DataDecoder {
+    fn write(&mut self, buffer: &[f32]) -> crate::traits::Result<usize> {
+        let symbol = self.sample(buffer);
 
-        result.and_then(|v| char::from_u32(v as u32))
+        Ok(0)
+    }
+}
+
+impl std::io::Read for DataDecoder {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+
+        Ok(0)
     }
 }

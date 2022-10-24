@@ -21,9 +21,9 @@ fn test_gen_and_fft() {
     gen.push(FrequencyComponent::new_simple(fbucket * 25.0));
     gen.read(&mut buf);
 
-    let fft = FftDecoder::perform(sample_rate, &buf);
+    let fft = FftDecoder::perform(&buf);
 
-    assert_eq!(fft.peak().frequency, fbucket * 25.0);
+    assert_eq!(fft.peak().channel, 25);
 }
 
 fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
@@ -37,17 +37,17 @@ fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
 
     let mut decoder = DataDecoder::new(config);
 
-    let mut s = String::new();
+    let mut s = Vec::new();
 
     while !encoder.done() {
         encoder.read(&mut buffer);
-        let v = decoder.sample(sample_rate, &buffer);
+        let v = decoder.sample(&buffer);
         if v.is_some() {
             s.push(v.unwrap());
         }
     }
 
-    assert_eq!(&s[1..], "Hello World");
+    assert_eq!(&s[1..], &[72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]);
 }
 
 #[test]
