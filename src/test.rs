@@ -26,13 +26,10 @@ fn test_gen_and_fft() {
     assert_eq!(fft.peak().frequency, fbucket * 25.0);
 }
 
-#[test]
-fn test_encode_and_decode() {
+fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
     let sample_rate: f32 = 48000.0;
-    let mut buffer = [0.0; 2048];
-    let fbucket = fbucket(sample_rate, buffer.len());
-
-    let config = ChannelConfig::new(fbucket);
+    let mut buffer = vec![0.0; buffer_len];
+    let fbucket = fbucket(sample_rate, buffer_len);
 
     let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, config);
     encoder.send_calibration();
@@ -54,10 +51,18 @@ fn test_encode_and_decode() {
 }
 
 #[test]
+fn test_lf_encode_and_decode() {
+    let sample_rate: f32 = 48000.0;
+    let buffer_len = 2048;
+    let fbucket = fbucket(sample_rate, buffer_len);
+    test_encode_and_decode(ChannelConfig::new(fbucket), buffer_len);
+}
+
+#[test]
 fn test_hf_encode_and_decode() {
     let sample_rate: f32 = 48000.0;
-    let mut buffer = [0.0; 512];
-    let fbucket = fbucket(sample_rate, buffer.len());
+    let buffer_len = 512;
+    let fbucket = fbucket(sample_rate, buffer_len);
 
     let config = ChannelConfig {
         fbucket,
@@ -75,23 +80,7 @@ fn test_hf_encode_and_decode() {
         volume: 0.25,
     };
 
-    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, config);
-    encoder.send_calibration();
-    encoder.write(b"Hello World");
-
-    let mut decoder = DataDecoder::new(config);
-
-    let mut s = String::new();
-
-    while !encoder.done() {
-        encoder.read(&mut buffer);
-        let v = decoder.sample(sample_rate, &buffer);
-        if v.is_some() {
-            s.push(v.unwrap());
-        }
-    }
-
-    assert_eq!(&s[1..], "Hello World");
+    test_encode_and_decode(config, buffer_len);
 }
 
 
