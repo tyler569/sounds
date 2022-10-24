@@ -2,12 +2,12 @@ use std::io::Write;
 
 use crate::{
     fft::{fbucket, FftDecoder},
-    listen::{differential_decode::DifferentialDecoder, Decoder},
+    listen::{differential_decode::DifferentialDecoder, Decoder, data_decode::DataDecoder},
     output::{
         differential_encode2::DifferentialEncoder2,
         soundgen::{FrequencyComponent, SoundGenerator},
     },
-    traits::SoundRead,
+    traits::SoundRead, config::ChannelConfig,
 };
 
 #[test]
@@ -29,48 +29,25 @@ fn test_gen_and_fft() {
 #[test]
 fn test_encode_and_decode() {
     let sample_rate: f32 = 48000.0;
-    let mut buf = [0.0; 2048];
-    let fbucket = fbucket(sample_rate, buf.len());
+    let mut buffer = [0.0; 2048];
+    let fbucket = fbucket(sample_rate, buffer.len());
 
-    let mut encoder = DifferentialEncoder2::new(sample_rate as f64, fbucket);
+    let config = ChannelConfig::new(fbucket);
+
+    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, config);
     encoder.send_calibration();
     encoder.write(b"Hello World");
 
-    let mut decoders = [
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-        DifferentialDecoder::new(4),
-    ];
+    let mut decoder = DataDecoder::new(config);
 
     let mut s = String::new();
 
     while !encoder.done() {
-        encoder.read(&mut buf);
-        let fft = FftDecoder::perform(sample_rate, &buf);
-        fft.print_frequency_range(300..575);
-
-        let decoded = [
-            decoders[0].sample(&fft.point(14)),
-            decoders[1].sample(&fft.point(16)),
-            decoders[2].sample(&fft.point(18)),
-            decoders[3].sample(&fft.point(20)),
-        ];
-
-        eprint!(" {:?}", decoded);
-
-        if decoded.iter().all(|v| v.is_some()) {
-            let v = decoded
-                .iter()
-                .map(|v| v.unwrap())
-                .rev()
-                .fold(0, |a, v| (a << 2) + v);
-            let c = char::from_u32(v as u32).unwrap();
-            eprint!(" {:?}", c);
-            s.push(c);
+        encoder.read(&mut buffer);
+        let v = decoder.sample(sample_rate, &buffer);
+        if v.is_some() {
+            s.push(v.unwrap());
         }
-
-        eprintln!();
     }
 
     assert_eq!(&s[1..], "Hello World");

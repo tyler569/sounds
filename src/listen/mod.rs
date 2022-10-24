@@ -8,6 +8,7 @@ use std::{f32::consts::PI, ops::Range};
 
 mod channel_decode;
 pub mod differential_decode;
+pub mod data_decode;
 
 use crate::fft::{FftDecoder, FftPoint};
 use crate::listen::differential_decode::DifferentialDecoder;

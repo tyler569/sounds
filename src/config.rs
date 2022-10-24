@@ -47,4 +47,12 @@ impl ChannelConfig {
     pub fn amplitude_buckets(&self) -> usize {
         2_usize.pow(self.amplitude_bits)
     }
+
+    fn channel_top(&self) -> usize {
+        self.channel_base + self.channel_step * self.channels
+    }
+
+    pub fn channels(&self) -> impl Iterator<Item = usize> + '_ {
+        (self.channel_base..self.channel_top()).step_by(self.channel_step)
+    }
 }
