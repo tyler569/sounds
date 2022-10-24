@@ -40,6 +40,30 @@ impl DataDecoder {
         s
     }
 
+    fn cache_coalesce(&mut self, i: usize, v: DecodeResult) -> Option<u64> {
+        match v {
+            DecodeResult::Noise => {
+                self.cache[i] = None;
+                None
+            }
+            DecodeResult::Signal(v) => {
+                self.cache[i] = Some(v);
+                self.cache[i]
+            }
+            DecodeResult::SameSignal => {
+                self.cache[i]
+            }
+        }
+    }
+
+    fn fold_channels_to_symbol(bits: u32, acc: Option<u64>, v: Option<u64>) -> Option<u64> {
+        if acc.is_some() && v.is_some() {
+            Some((acc.unwrap() << bits) + v.unwrap())
+        } else {
+            None
+        }
+    }
+
     pub fn sample(&mut self, sample_rate: f32, buffer: &[f32]) -> Option<char> {
         let fft = FftDecoder::perform(sample_rate, buffer);
         let mut decoded = Vec::with_capacity(self.decoders.len());
@@ -51,47 +75,29 @@ impl DataDecoder {
         );
 
         // eprint!(" {:?}", decoded);
+        let bits_per_channel = self.config.bits_per_channel();
 
         let symbol = decoded
             .iter()
             .enumerate()
-            .map(|(i, v)| {
-                match v {
-                    DecodeResult::Noise => {
-                        self.cache[i] = None;
-                        None
-                    }
-                    DecodeResult::Signal(v) => {
-                        self.cache[i] = Some(*v);
-                        self.cache[i]
-                    }
-                    DecodeResult::SameSignal => {
-                        self.cache[i]
-                    }
-                }
-            })
+            .map(|(i, &v)| self.cache_coalesce(i, v))
+            // .map(|v| { eprint!(" {:?}", v); v })
             .rev()
-            .fold(Some(0), |a, v| {
-                if a.is_some() && v.is_some() {
-                    Some((a.unwrap() << self.config.bits_per_channel()) + v.unwrap())
-                } else {
-                    None
-                }
-            });
+            .fold(Some(0), |a, v| Self::fold_channels_to_symbol(bits_per_channel, a, v));
 
         if symbol.is_none() {
             self.last_symbol = None;
         }
 
-        let u = if symbol == self.last_symbol {
+        let result = if symbol == self.last_symbol {
             None
         } else {
             self.last_symbol = symbol;
             symbol
         };
 
-        eprintln!(" {:?}", u.and_then(|v| char::from_u32(v as u32)));
+        eprintln!(" {:?}", result.and_then(|v| char::from_u32(v as u32)));
 
-        u.and_then(|v| char::from_u32(v as u32))
+        result.and_then(|v| char::from_u32(v as u32))
     }
 }
