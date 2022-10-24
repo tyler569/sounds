@@ -80,10 +80,10 @@ impl SoundGenerator {
             .push(FrequencyComponent::new_simple(frequency));
     }
 
-    fn sample(&self, waveform: &[FrequencyComponent]) -> Option<f64> {
+    fn sample(&self, waveform: &[FrequencyComponent]) -> f64 {
         let total_volume: f64 = waveform.iter().map(|w| w.relative_volume).sum();
         if total_volume == 0.0 {
-            return None;
+            return 0.0
         }
 
         let sample_single = |w: &FrequencyComponent| -> f64 {
@@ -92,12 +92,10 @@ impl SoundGenerator {
                 / total_volume
         };
 
-        let sample: f64 = waveform.iter().map(sample_single).sum();
-
-        Some(sample)
+        waveform.iter().map(sample_single).sum()
     }
 
-    pub fn tick(&mut self) -> f32 {
+    fn receive_command(&mut self) {
         if let Some(ref receiver) = self.commands {
             if let Ok(command) = receiver.try_recv() {
                 match command {
@@ -112,9 +110,9 @@ impl SoundGenerator {
                 }
             }
         }
+    }
 
-        self.sample_clock += 1.;
-
+    fn do_volume_transition(&mut self) {
         if self.volume_transition > 0.0 {
             let volume_diff = self.volume_target - self.volume;
             let volume_step = volume_diff / (self.volume_transition * self.sample_rate);
@@ -122,33 +120,23 @@ impl SoundGenerator {
             self.volume += volume_step;
             self.volume_transition -= 1. / self.sample_rate;
         }
+    }
+
+    pub fn tick(&mut self) -> f32 {
+        self.receive_command();
+
+        self.sample_clock += 1.;
+
+        self.do_volume_transition();
 
         let raw_sample = self.sample(&self.waveform);
-        if raw_sample.is_none() {
-            return 0.0;
-        }
-        let raw_sample = raw_sample.unwrap();
 
         if !((-1.0..=1.0).contains(&raw_sample)) {
             eprintln!("illegal sample: {}", raw_sample);
             eprintln!("waveform: {:?}", self.waveform);
+            assert!(false);
         }
-
-        assert!((-1.0..=1.0).contains(&raw_sample));
 
         (raw_sample * self.volume) as f32
-    }
-}
-
-pub fn test_sound_generator() {
-    let mut generator = SoundGenerator::new(44100., None);
-
-    for i in 0..100 {
-        let mut buffer = [0f32; 4410];
-        for sample in buffer.iter_mut() {
-            *sample = generator.tick();
-        }
-
-        buffer.map(|c| println!("{}", c));
     }
 }
