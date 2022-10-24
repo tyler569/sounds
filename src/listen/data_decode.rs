@@ -37,7 +37,7 @@ impl DataDecoder {
             decoded.push(self.decoders[i].sample(&fft.point(c)))
         );
 
-        eprint!("DataDecoder: {:?}", decoded);
+        eprint!(" DataDecoder: {:?}", decoded);
 
         if decoded.iter().all(Option::is_some) {
             let v = decoded

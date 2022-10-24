@@ -18,6 +18,8 @@ mod output;
 mod traits;
 mod ui;
 
+mod inverse_fft;
+
 #[cfg(test)]
 mod test;
 
@@ -38,6 +40,9 @@ struct Args {
 }
 
 fn main() {
+    inverse_fft::encode();
+    std::process::exit(0);
+
     let args = Args::parse();
 
     let mut istream = None;

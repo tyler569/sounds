@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{io::Write, time::Duration};
 
 use crate::{
     fft::{fbucket, FftDecoder},
@@ -52,3 +52,46 @@ fn test_encode_and_decode() {
 
     assert_eq!(&s[1..], "Hello World");
 }
+
+#[test]
+fn test_hf_encode_and_decode() {
+    let sample_rate: f32 = 48000.0;
+    let mut buffer = [0.0; 512];
+    let fbucket = fbucket(sample_rate, buffer.len());
+
+    let config = ChannelConfig {
+        fbucket,
+        
+        channel_base: 160, /* ~ 15kHz */
+        channel_step: 2,
+        channels: 4,
+
+        symbol_duration: Duration::from_millis(30),
+        pause_duration: Duration::from_millis(20),
+
+        phase_bits: 2,
+        amplitude_bits: 0,
+
+        volume: 0.25,
+    };
+
+    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, config);
+    encoder.send_calibration();
+    encoder.write(b"Hello World");
+
+    let mut decoder = DataDecoder::new(config);
+
+    let mut s = String::new();
+
+    while !encoder.done() {
+        encoder.read(&mut buffer);
+        let v = decoder.sample(sample_rate, &buffer);
+        if v.is_some() {
+            s.push(v.unwrap());
+        }
+    }
+
+    assert_eq!(&s[1..], "Hello World");
+}
+
+
