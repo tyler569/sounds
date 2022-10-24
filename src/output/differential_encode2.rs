@@ -3,7 +3,7 @@ use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
 use cpal::SampleRate;
 use crossbeam::channel::Sender;
 
-use crate::traits::{Result, SoundRead};
+use crate::{traits::{Result, SoundRead}, config::ChannelConfig};
 
 use super::soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
 
@@ -14,30 +14,19 @@ struct TimedCommand {
 }
 
 pub struct DifferentialEncoder2 {
-    fbucket: f32,
-
-    channels: usize,
-    base_channel: usize,
-    step: usize,
-
-    amplitude_buckets: usize,
-    phase_buckets: usize,
-
-    symbol_duration: Duration,
-    pause_duration: Duration,
+    channel_config: ChannelConfig,
 
     previous_symbol: Vec<u64>,
 
     queued_duration: Duration,
     current_duration: Duration,
 
-    volume: f64,
-
     command_queue: VecDeque<TimedCommand>,
 
     sample_clock: f64,
     sample_rate: f64,
 
+    volume: f64,
     volume_target: f64,
     volume_transition: f64,
 
@@ -45,46 +34,60 @@ pub struct DifferentialEncoder2 {
 }
 
 impl DifferentialEncoder2 {
-    pub fn new(sample_rate: f64, fbucket: f32, phase_buckets: usize) -> Self {
+    pub fn new(sample_rate: f64, fbucket: f32) -> Self {
         let mut encoder = Self {
-            fbucket,
-
-            channels: 4,
-            base_channel: 14,
-            step: 2,
-
-            amplitude_buckets: 1,
-            phase_buckets,
-
-            symbol_duration: Duration::from_millis(150),
-            pause_duration: Duration::from_millis(100),
+            channel_config: ChannelConfig::new(fbucket),
 
             previous_symbol: Vec::new(),
 
             queued_duration: Duration::ZERO,
             current_duration: Duration::ZERO,
 
+            command_queue: VecDeque::new(),
+
+            sample_clock: 0.0,
+            sample_rate,
+
             volume: 0.1,
+            volume_target: 0.0,
+            volume_transition: 0.0,
+
+            waveform: Vec::new(),
+        };
+
+        for i in 0..encoder.channels() {
+            encoder.previous_symbol.push(0);
+        }
+
+        encoder
+    }
+
+    pub fn new_config(sample_rate: f64, config: ChannelConfig) -> Self {
+        let mut encoder = Self {
+            channel_config: config,
+
+            previous_symbol: Vec::new(),
+
+            queued_duration: Duration::ZERO,
+            current_duration: Duration::ZERO,
 
             command_queue: VecDeque::new(),
 
             sample_clock: 0.0,
             sample_rate,
 
-            volume_target: 0.1,
+            volume: 0.1,
+            volume_target: 0.0,
             volume_transition: 0.0,
 
             waveform: Vec::new(),
         };
 
-        for i in 0..encoder.channels {
+        for i in 0..encoder.channels() {
             encoder.previous_symbol.push(0);
         }
 
         println!("DifferentialEncoder2!");
-
-        assert!(encoder.amplitude_buckets.is_power_of_two());
-        assert!(encoder.phase_buckets.is_power_of_two());
 
         encoder
     }
@@ -113,20 +116,54 @@ impl DifferentialEncoder2 {
         self.current_duration >= self.queued_duration
     }
 
+    // Config accessors
+
+    fn channels(&self) -> usize {
+        self.channel_config.channels
+    }
+
+    fn base(&self) -> usize {
+        self.channel_config.channel_base
+    }
+
+    fn step(&self) -> usize {
+        self.channel_config.channel_step
+    }
+
+    fn phase_buckets(&self) -> usize {
+        self.channel_config.phase_buckets()
+    }
+
+    fn amplitude_buckets(&self) -> usize {
+        self.channel_config.amplitude_buckets()
+    }
+
+    fn symbol_duration(&self) -> Duration {
+        self.channel_config.symbol_duration
+    }
+
+    fn pause_duration(&self) -> Duration {
+        self.channel_config.pause_duration
+    }
+
+    fn fbucket(&self) -> f32 {
+        self.channel_config.fbucket
+    }
+
     // Taken from DifferentialEncoder
 
     pub fn send_calibration(&mut self) {
         self.off(Duration::from_millis(100));
         self.clear();
 
-        for i in 0..self.channels {
+        for i in 0..self.channels() {
             let freq = self.channel_frequency(i);
             let wave = FrequencyComponent::new_simple(freq);
             self.add(wave);
         }
 
-        self.on(self.symbol_duration * 2);
-        self.off(self.pause_duration);
+        self.on(self.symbol_duration() * 2);
+        self.off(self.pause_duration());
     }
 
     /// Invariants: when you call this method, the volume is 0 and the quiet
@@ -134,14 +171,16 @@ impl DifferentialEncoder2 {
     pub fn send_symbol(&mut self, mut data: u64) {
         self.clear();
 
-        let bits = self.bits_per_symbol() / self.channels();
+        let bits = self.bits_per_symbol() / self.channels_u32();
         let mask = 2_u64.pow(bits) - 1;
 
-        // println!("send symbol: {:08b}", data);
+        // eprint!("symbol: {:08b} (", data);
 
-        for channel in 0..self.channels {
+        for channel in 0..self.channels() {
             let mut channel_data = data & mask;
             data >>= bits;
+
+            // eprint!("c:{:02b}", channel_data);
 
             /*
             let amplitude_mask = self.amplitude_buckets as u64 - 1;
@@ -151,46 +190,47 @@ impl DifferentialEncoder2 {
 
             let phase_bucket = channel_data as i64;
             let differential_phase_bucket = (self.previous_symbol[channel] as i64 - phase_bucket)
-                .rem_euclid(self.channels as i64)
+                .rem_euclid(self.channels() as i64)
                 as u64;
 
-            assert!(differential_phase_bucket < self.phase_buckets as u64);
+            assert!(differential_phase_bucket < self.phase_buckets() as u64);
 
             let phase =
-                differential_phase_bucket as f32 / self.phase_buckets as f32 * std::f32::consts::PI;
+                differential_phase_bucket as f32 / self.phase_buckets() as f32 * std::f32::consts::PI;
 
             let wave = FrequencyComponent::new(self.channel_frequency(channel), phase, 1.0);
             self.add(wave);
 
             self.previous_symbol[channel] = differential_phase_bucket;
         }
+        // eprintln!(")");
 
-        self.on(self.symbol_duration);
-        self.off(self.pause_duration);
+        self.on(self.symbol_duration());
+        self.off(self.pause_duration());
     }
 
     fn bits_per_symbol(&self) -> u32 {
-        (self.amplitude_bits_per_channel() + self.phase_bits_per_channel()) * self.channels()
+        (self.amplitude_bits_per_channel() + self.phase_bits_per_channel()) * self.channels_u32()
     }
 
     fn amplitude_bits_per_channel(&self) -> u32 {
-        log2(self.amplitude_buckets)
+        log2(self.amplitude_buckets())
     }
 
     fn phase_bits_per_channel(&self) -> u32 {
-        log2(self.phase_buckets)
+        log2(self.phase_buckets())
     }
 
-    fn channels(&self) -> u32 {
-        self.channels as u32
+    fn channels_u32(&self) -> u32 {
+        self.channels() as u32
     }
 
     fn channel_frequency(&self, bucket: usize) -> f32 {
-        (self.base_channel + bucket * self.step) as f32 * self.fbucket
+        (self.base() + bucket * self.step()) as f32 * self.fbucket()
     }
 
     fn on(&mut self, duration: Duration) {
-        self.enqueue_action(SoundCommand::TransitionVolume(self.volume), duration)
+        self.enqueue_action(SoundCommand::TransitionVolume(self.channel_config.volume), duration)
     }
 
     fn off(&mut self, duration: Duration) {
@@ -240,7 +280,7 @@ impl DifferentialEncoder2 {
                     self.volume_target = v;
                     self.volume_transition = 0.005;
                 }
-                SoundCommand::SetVolume(v) => self.volume = v,
+                SoundCommand::SetVolume(v) => self.channel_config.volume = v,
                 SoundCommand::AddWaveform(w) => self.waveform.push(w),
                 SoundCommand::RemoveWaveform(f) => self.waveform.retain(|w| w.frequency != f),
                 SoundCommand::ClearWaveform => self.waveform.clear(),

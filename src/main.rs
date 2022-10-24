@@ -11,6 +11,7 @@ use output::{
 use rustyline::error::ReadlineError;
 use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Duration};
 
+mod config;
 mod fft;
 mod listen;
 mod output;

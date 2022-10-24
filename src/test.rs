@@ -32,7 +32,7 @@ fn test_encode_and_decode() {
     let mut buf = [0.0; 2048];
     let fbucket = fbucket(sample_rate, buf.len());
 
-    let mut encoder = DifferentialEncoder2::new(sample_rate as f64, fbucket, 4);
+    let mut encoder = DifferentialEncoder2::new(sample_rate as f64, fbucket);
     encoder.send_calibration();
     encoder.write(b"Hello World");
 
@@ -43,7 +43,7 @@ fn test_encode_and_decode() {
         DifferentialDecoder::new(4),
     ];
 
-    let mut c = String::new();
+    let mut s = String::new();
 
     while !encoder.done() {
         encoder.read(&mut buf);
@@ -65,12 +65,13 @@ fn test_encode_and_decode() {
                 .map(|v| v.unwrap())
                 .rev()
                 .fold(0, |a, v| (a << 2) + v);
-            eprint!(" {}", char::from_u32(v as u32).unwrap());
-            c.push(char::from_u32(v as u32).unwrap());
+            let c = char::from_u32(v as u32).unwrap();
+            eprint!(" {:?}", c);
+            s.push(c);
         }
 
         eprintln!();
     }
 
-    assert_eq!(&c[1..], "Hello World");
+    assert_eq!(&s[1..], "Hello World");
 }
