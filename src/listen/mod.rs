@@ -25,13 +25,11 @@ fn choose_buffer_size(config: &StreamConfig, target_fbucket: f32) -> u32 {
         possible_fbuckets.clone().collect::<Vec<_>>()
     );
 
-    let best_buffer = possible_fbuckets
+    possible_fbuckets
         .enumerate()
         .min_by_key(|(i, v)| ((target_fbucket - v).abs() * 10000.0) as i64)
         .map(|(i, _)| 2u32.pow(i as u32 + 1))
-        .unwrap();
-
-    best_buffer
+        .unwrap()
 }
 
 pub fn listen(target_fbucket: f32) -> (Stream, f32) {

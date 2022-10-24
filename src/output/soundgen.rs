@@ -129,12 +129,12 @@ impl SoundGenerator {
         }
         let raw_sample = raw_sample.unwrap();
 
-        if !(raw_sample <= 1.0 && raw_sample >= -1.0) {
+        if !((-1.0..=1.0).contains(&raw_sample)) {
             eprintln!("illegal sample: {}", raw_sample);
             eprintln!("waveform: {:?}", self.waveform);
         }
 
-        assert!(raw_sample <= 1.0 && raw_sample >= -1.0);
+        assert!((-1.0..=1.0).contains(&raw_sample));
 
         (raw_sample * self.volume) as f32
     }

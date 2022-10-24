@@ -13,7 +13,7 @@ pub fn ui(snd: channel::Sender<SoundCommand>) {
         };
 
         let words: Vec<_> = readline.trim().split_ascii_whitespace().collect();
-        if words.len() == 0 {
+        if words.is_empty() {
             continue;
         }
 
