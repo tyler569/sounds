@@ -1,9 +1,18 @@
+use num_complex::{Complex, ComplexFloat};
+
 use super::{Decoder, FftPoint};
 
 pub struct DifferentialDecoder {
     phase_buckets: usize,
     last_phase: Option<f32>,
     in_a_row: usize,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum DecodeResult {
+    Signal(u64),
+    SameSignal,
+    Noise,
 }
 
 impl DifferentialDecoder {
@@ -17,14 +26,18 @@ impl DifferentialDecoder {
         }
     }
 
-    pub fn is_signal(&mut self, point: &FftPoint) -> bool {
+    pub fn is_signal(&mut self, point: &FftPoint) -> DecodeResult {
         if point.amplitude < 10.0 {
             self.in_a_row = 0;
-            return false;
+            return DecodeResult::Noise;
         }
 
         self.in_a_row += 1;
-        self.in_a_row == 2
+        match self.in_a_row {
+            1 => DecodeResult::Noise,
+            2 => DecodeResult::Signal(0),
+            _ => DecodeResult::SameSignal,
+        }
     }
 
     fn phase_bucket_width(&self) -> f32 {
@@ -39,12 +52,11 @@ impl DifferentialDecoder {
         let width = self.phase_bucket_width();
         (mod_add(phase, width / 2.0) / width) as u64
     }
-}
 
-impl Decoder for DifferentialDecoder {
-    fn sample(&mut self, point: &FftPoint) -> Option<u64> {
-        if !self.is_signal(point) {
-            return None;
+    pub fn sample(&mut self, point: &FftPoint) -> DecodeResult {
+        match self.is_signal(point) {
+            DecodeResult::Signal(_) => {}
+            x => return x,
         }
 
         let mut dphase = 0.0;
@@ -53,7 +65,7 @@ impl Decoder for DifferentialDecoder {
         }
         self.last_phase = Some(point.phase);
 
-        Some(self.phase_find_bucket(dphase))
+        DecodeResult::Signal(self.phase_find_bucket(dphase))
     }
 }
 
@@ -69,4 +81,8 @@ fn mod_aeq(a: f32, b: f32) -> bool {
     let epsilon = 0.01;
     let diff = mod_sub(a, b);
     diff > 1.0 - epsilon || diff < epsilon
+}
+
+fn cplx_aeq(a: Complex<f32>, b: Complex<f32>) -> bool {
+    (b - a).abs() < 0.1
 }
