@@ -31,7 +31,7 @@ impl DataDecoder {
         let fft = FftDecoder::perform(sample_rate, buffer);
         let mut decoded = Vec::with_capacity(self.decoders.len());
 
-        fft.print_frequency_range(self.config.channels_range());
+        fft.print_channel_range(self.config.channels_range());
 
         self.config.channels().enumerate().for_each(|(i, c)|
             decoded.push(self.decoders[i].sample(&fft.point(c)))

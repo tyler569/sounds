@@ -49,7 +49,7 @@ impl ChannelConfig {
     }
 
     pub fn channels_range(&self) -> Range<usize> {
-        self.channel_base - 1 .. self.channel_top() + 2
+        self.channel_base - 2 .. self.channel_top() + 1
     }
     
 }

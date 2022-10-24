@@ -211,6 +211,29 @@ impl DifferentialEncoder2 {
         self.off(self.pause_duration());
     }
 
+    pub fn send_data(&mut self, data: &[u8]) {
+        // Inefficient because it has to allocate a Vec of bools, but much
+        // easier to read than the alternative bit-twiddling.
+        //
+        // There may be a way to avoid the collect and keep everything as
+        // Iterators, which would make this much better.
+
+        fn to_bit_vector(v: u8) -> impl Iterator<Item = bool> {
+            (0..8).map(move |b| (v & (1 << b)) != 0).rev()
+        }
+
+        fn to_int(v: &[bool]) -> u64 {
+            v.iter().fold(0, |a, &b| (a << 1) + b as u64)
+        }
+
+        let iter = data.iter().flat_map(|&v| to_bit_vector(v)).collect::<Vec<bool>>();
+        
+        for v in iter.chunks(self.bits_per_symbol() as usize) {
+            eprintln!("sending symbol: {:?} {:08b}", v, to_int(v));
+            self.send_symbol(to_int(v));
+        }
+    }
+
     fn bits_per_symbol(&self) -> u32 {
         (self.amplitude_bits_per_channel() + self.phase_bits_per_channel()) * self.channels_u32()
     }
@@ -327,7 +350,9 @@ impl DifferentialEncoder2 {
 
 impl Write for DifferentialEncoder2 {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        buf.iter().for_each(|&v| self.send_symbol(v as u64));
+        // buf.iter().for_each(|&v| self.send_symbol(v as u64));
+
+        self.send_data(buf);
 
         Ok(buf.len())
     }

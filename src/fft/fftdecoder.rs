@@ -72,4 +72,10 @@ impl FftDecoder {
         (bottom..top).for_each(|v| eprint!("{}", self.point(v)));
         eprint!("]");
     }
+
+    pub fn print_channel_range(&self, f: Range<usize>) {
+        eprint!("[");
+        f.for_each(|v| eprint!("{}", self.point(v)));
+        eprint!("]");
+    }
 }
