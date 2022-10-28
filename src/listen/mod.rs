@@ -10,7 +10,7 @@ mod channel_decode;
 pub mod differential_decode;
 pub mod data_decode;
 
-use crate::fft::{FftDecoder, FftPoint};
+use crate::{fft::{FftDecoder, FftPoint}, listen::data_decode::DataDecoder};
 use crate::listen::differential_decode::DifferentialDecoder;
 
 pub trait Decoder {
@@ -49,35 +49,13 @@ pub fn listen(target_fbucket: f32) -> (Stream, f32) {
 
     let mut first = true;
 
+    // let mut decoder = DataDecoder::new();
+
     let stream = device
         .build_input_stream(
             &config,
             move |samples: &[f32], info: &cpal::InputCallbackInfo| {
-                let fft = FftDecoder::perform(samples);
-
-                fft.print_channel_range(12..22);
-                eprintln!();
-
-                // let decoded = [
-                //     decoders[0].sample(&values[14]),
-                //     decoders[1].sample(&values[16]),
-                //     decoders[2].sample(&values[18]),
-                //     decoders[3].sample(&values[20]),
-                // ];
-
-                // if decoded.iter().all(|v| v.is_some()) {
-                //     let v = decoded
-                //         .iter()
-                //         .map(|v| v.unwrap())
-                //         .rev()
-                //         .fold(0, |a, v| (a << 2) + v);
-                //     eprint!("({:>7?}) ", char::from_u32(v as u32).unwrap());
-                // } else {
-                //     eprint!{"          "}
-                // }
-
-                // decoded.iter().for_each(|v| eprint!("{:?} ", v));
-                // eprintln!();
+                // decoder.decode
             },
             move |err| eprintln!("{:?}", err),
         )

@@ -173,7 +173,7 @@ impl DifferentialEncoder2 {
     pub fn send_symbol(&mut self, mut data: u64) {
         self.clear();
 
-        let bits = self.bits_per_symbol() / self.channels_u32();
+        let bits = self.bits_per_channel();
         let mask = 2_u64.pow(bits) - 1;
 
         // eprint!("symbol: {:08b} (", data);
@@ -192,7 +192,7 @@ impl DifferentialEncoder2 {
 
             let phase_bucket = channel_data as i64;
             let differential_phase_bucket = (self.previous_symbol[channel] as i64 - phase_bucket)
-                .rem_euclid(self.channels() as i64)
+                .rem_euclid(self.phase_buckets() as i64)
                 as u64;
 
             assert!(differential_phase_bucket < self.phase_buckets() as u64);
@@ -233,8 +233,12 @@ impl DifferentialEncoder2 {
         }
     }
 
+    fn bits_per_channel(&self) -> u32 {
+        self.amplitude_bits_per_channel() + self.phase_bits_per_channel()
+    }
+
     fn bits_per_symbol(&self) -> u32 {
-        (self.amplitude_bits_per_channel() + self.phase_bits_per_channel()) * self.channels_u32()
+        self.bits_per_channel() * self.channels_u32()
     }
 
     fn amplitude_bits_per_channel(&self) -> u32 {
@@ -342,6 +346,8 @@ impl DifferentialEncoder2 {
         }
 
         self.current_duration += self.tick_duration();
+
+        // eprintln!("{}", raw_sample * self.volume);
 
         (raw_sample * self.volume) as f32
     }

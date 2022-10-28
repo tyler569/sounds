@@ -26,14 +26,17 @@ fn test_gen_and_fft() {
     assert_eq!(fft.peak().channel, 25);
 }
 
-fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
+fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {
+    const DATA: &[u8] = b"Hello World";
+    let data_u64: Vec<u64> = DATA.iter().map(|&v| v as u64).collect();
+
     let sample_rate: f32 = 48000.0;
     let mut buffer = vec![0.0; buffer_len];
     let fbucket = fbucket(sample_rate, buffer_len);
 
     let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, fbucket, config);
     encoder.send_calibration();
-    encoder.write(b"Hello World");
+    encoder.write(DATA);
 
     let mut decoder = DataDecoder::new(config);
 
@@ -47,12 +50,17 @@ fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) {
         }
     }
 
-    assert_eq!(&s[1..], &[72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]);
+    if &s[1..] != data_u64 {
+        eprintln!("{:?} != {:?}", &s[1..], data_u64);
+        false
+    } else {
+        true
+    }
 }
 
 #[test]
 fn test_lf_encode_and_decode() {
-    test_encode_and_decode(ChannelConfig::new(), 2048);
+    assert!(test_encode_and_decode(ChannelConfig::new(), 2048));
 }
 
 #[test]
@@ -71,19 +79,21 @@ fn test_hf_encode_and_decode() {
         volume: 0.25,
     };
 
-    test_encode_and_decode(config, 512);
+    assert!(test_encode_and_decode(config, 512));
 }
 
 #[test]
-fn fuzz_hf_encode_and_decode_settings() {
-    for base in (160..240).step_by(10) {
+fn test_sweep_encode_and_decode() {
+    const SAMPLES: usize = 512;
+
+    for channel in 1..SAMPLES/2 - 4 {
         let config = ChannelConfig {
-            channel_base: base,
-            channel_step: 2,
+            channel_base: channel,
+            channel_step: 1,
             channels: 4,
 
-            symbol_duration: Duration::from_millis(50),
-            pause_duration: Duration::from_millis(50),
+            symbol_duration: Duration::from_millis(21),
+            pause_duration: Duration::from_millis(14),
 
             phase_bits: 2,
             amplitude_bits: 0,
@@ -91,8 +101,41 @@ fn fuzz_hf_encode_and_decode_settings() {
             volume: 0.25,
         };
 
-        test_encode_and_decode(config, 512);
+        if !test_encode_and_decode(config, SAMPLES) {
+            eprintln!("sweep failed at {}", channel);
+            assert!(false);
+        }
     }
+}
+
+#[test]
+fn fuzz_hf_encode_and_decode_settings() {
+    let mut best = (100, 100);
+
+    for sym in 6..30 {
+        for pause in 6..30 {
+            let config = ChannelConfig {
+                channel_base: 24,
+                channel_step: 1,
+                channels: 4,
+
+                symbol_duration: Duration::from_millis(sym),
+                pause_duration: Duration::from_millis(pause),
+
+                phase_bits: 2,
+                amplitude_bits: 0,
+
+                volume: 0.25,
+            };
+            if test_encode_and_decode(config, 512) {
+                if sym + pause < best.0 + best.1 {
+                    best = (sym, pause);
+                }
+            }
+        }
+    }
+
+    eprintln!("best: {}, {}", best.0, best.1);
 }
 
 

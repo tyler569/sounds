@@ -77,7 +77,7 @@ impl DataDecoder {
             .iter()
             .enumerate()
             .map(|(i, &v)| self.cache_coalesce(i, v))
-            // .map(|v| { eprint!(" {:?}", v); v })
+            .map(|v| { eprint!(" {:?}", v); v })
             .rev()
             .fold(Some(0), |a, v| Self::fold_channels_to_symbol(bits_per_channel, a, v));
 
