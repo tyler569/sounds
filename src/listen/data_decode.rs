@@ -1,6 +1,6 @@
 use std::collections::btree_set::SymmetricDifference;
 
-use crate::{config::ChannelConfig, fft::FftDecoder, listen::Decoder, traits::SoundWrite};
+use crate::{config::ChannelConfig, fft::FftDecoder, listen::Decoder, traits::SoundWrite, bit_org::BitOrg};
 
 use super::differential_decode::{DifferentialDecoder, DecodeResult};
 
@@ -10,9 +10,7 @@ pub struct DataDecoder {
     cache: Vec<Option<u64>>,
     last_symbol: Option<u64>,
 
-    acc: u64,
-    bits_in_acc: usize,
-    unread_data: Vec<u8>,
+    data: BitOrg,
 }
 
 impl DataDecoder {
@@ -23,9 +21,7 @@ impl DataDecoder {
             cache: Vec::new(),
             last_symbol: None,
 
-            acc: 0,
-            bits_in_acc: 0,
-            unread_data: Vec::new(),
+            data: BitOrg::new(),
         };
 
         for i in s.config.channels() {
@@ -94,6 +90,9 @@ impl DataDecoder {
             symbol
         }
     }
+
+    fn push_unread_data(&mut self, symbol: u64) {
+    }
 }
         
 
@@ -101,13 +100,16 @@ impl SoundWrite for DataDecoder {
     fn write(&mut self, buffer: &[f32]) -> crate::traits::Result<usize> {
         let symbol = self.sample(buffer);
 
-        Ok(0)
+        if let Some(symbol) = symbol {
+            self.data.push_bits(self.config.bits_per_symbol(), symbol);
+        }
+
+        Ok(buffer.len())
     }
 }
 
 impl std::io::Read for DataDecoder {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-
-        Ok(0)
+        self.data.read(buf)
     }
 }

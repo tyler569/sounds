@@ -18,6 +18,7 @@ use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Durati
 
 use crate::fft::FftPoint;
 
+mod bit_org;
 mod config;
 mod fft;
 mod io2;
