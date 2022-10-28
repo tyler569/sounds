@@ -1,3 +1,6 @@
+use std::thread::sleep;
+use std::time::Duration;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
     Device,
@@ -8,7 +11,6 @@ use cpal::{
     Stream,
 };
 use ringbuf::HeapRb;
-use std::sync::{Arc, Condvar, Mutex};
 use crate::traits::{Result, SoundRead};
 
 const RINGBUF_SIZE: usize = 32 * 1024;
@@ -35,33 +37,27 @@ pub struct InputStream {
     stream: Stream,
     config: StreamConfig,
     ringbuf: ringbuf::HeapConsumer<f32>,
-    arc: Arc<(Condvar, Mutex<bool>)>,
-    on_block: Option<Box<dyn FnMut()>>,
 }
 
 impl InputStream {
-    fn wait(&mut self) {
-        let &(ref cvar, ref mtx) = &*self.arc;
-        let guard = mtx.lock().unwrap();
-        cvar.wait(guard);
-    }
-
     pub fn pop(&mut self) -> f32 {
-        let mut v = self.ringbuf.pop();
-        while v.is_none() {
-            self.wait();
-            v = self.ringbuf.pop();
+        loop {
+            match self.ringbuf.pop() {
+                Some(v) => return v,
+                None => sleep(Duration::from_millis(1)),
+            }
         }
-        v.unwrap()
     }
 
     pub fn pop_slice(&mut self, buffer: &mut [f32]) -> usize {
         let mut total = 0;
-
-        while total < buffer.len() {
+        loop {
             total += self.ringbuf.pop_slice(&mut buffer[total..]);
+            if total == buffer.len() {
+                break
+            }
+            sleep(Duration::from_millis(1));
         }
-
         total
     }
 }
@@ -78,14 +74,11 @@ pub fn input() -> InputStream {
 
     let mut ring = buffer();
     let (mut inp, mut out) = ring.split();
-    let cvar = Arc::new((Condvar::new(), Mutex::new(false)));
-    let cvar_res = cvar.clone();
 
     let stream = device.build_input_stream(
         &config,
         move |buf, info| {
             inp.push_slice(buf);
-            cvar.0.notify_all();
         },
         move |err| {
             eprintln!("input stream error: {:?}", err);
@@ -96,7 +89,5 @@ pub fn input() -> InputStream {
         stream,
         config,
         ringbuf: out,
-        arc: cvar_res,
-        on_block: None,
     }
 }

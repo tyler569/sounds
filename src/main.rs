@@ -4,6 +4,7 @@
 use clap::Parser;
 use cpal::{traits::HostTrait, Device};
 use crossbeam::channel;
+use io2::input::input;
 use num_complex::{Complex, ComplexFloat};
 use output::{
     differential_encode::DifferentialEncoder,
@@ -12,15 +13,15 @@ use output::{
 };
 use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
+use traits::SoundRead;
 use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Duration};
 
 use crate::fft::FftPoint;
 
 mod config;
 mod fft;
-// mod io2;
+mod io2;
 mod listen;
-mod ringbuf;
 mod output;
 mod traits;
 mod ui;
@@ -48,50 +49,22 @@ struct Args {
 
 fn main() {
 
-    use cpal::traits::*;
-    use std::io::Read;
 
-    let host = cpal::default_host();
-    let device = host.default_input_device().unwrap();
-    let config = device
-        .supported_input_configs()
-        .unwrap()
-        .max_by_key(|c| c.max_sample_rate())
-        .unwrap()
-        .with_max_sample_rate()
-        .config();
 
-    let mut buffer = [Complex::new(0.0, 0.0); 4096];
-    let mut n = 0;
+    let mut input = input();
+    let mut buffer = [0f32; 96000];
+    loop {
+        let len = input.read(&mut buffer).unwrap();
+        println!("{:?} {:?}", &buffer[..2], &buffer[95998..]);
+    }
 
-    let stream = device.build_input_stream(
-        &config,
-        move |data, _info| {
-            n += 1;
-            if n % 50 != 0 {
-                return
-            }
 
-            data.iter().enumerate().for_each(|(i, &v)| buffer[i].re = v);
 
-            let mut planner = FftPlanner::new();
-            let fft = planner.plan_fft_forward(4096);
-            fft.process(&mut buffer);
 
-            print!("[");
-            buffer[..2048].iter().enumerate().for_each(|(i, &v)| {
-                let point = FftPoint::new(i, v);
-                print!("{}", point);
-            });
-            println!("]");
-        },
-        |err| {
-            eprintln!("audio stream error: {:?}", err);
-        }).unwrap();
 
-    stream.play();
 
-    std::thread::sleep(std::time::Duration::from_secs(100));
+
+
     std::process::exit(0);
 
     let args = Args::parse();

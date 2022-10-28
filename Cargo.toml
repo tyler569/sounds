@@ -9,6 +9,7 @@ edition = "2021"
 clap = { version = "4.0", features = ["derive"] }
 cpal = "0.14.0"
 crossbeam = "0.8.2"
+ringbuf = "0.3.1"
 rustyline = "10.0.0"
 rustfft = "6.0.1"
 num-complex = "0.4.2"

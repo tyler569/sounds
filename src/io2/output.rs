@@ -1,3 +1,6 @@
+use std::thread::sleep;
+use std::time::Duration;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
     Device,
@@ -8,7 +11,6 @@ use cpal::{
     Stream,
 };
 use ringbuf::HeapRb;
-use std::sync::{Arc, Condvar, Mutex};
 use crate::traits::{Result, SoundWrite};
 
 const RINGBUF_SIZE: usize = 32 * 1024;
@@ -35,32 +37,27 @@ pub struct OutputStream {
     stream: Stream,
     config: StreamConfig,
     ringbuf: ringbuf::HeapProducer<f32>,
-    arc: Arc<(Condvar, Mutex<bool>)>,
 }
 
 impl OutputStream {
-    fn wait(&mut self) {
-        let &(ref cvar, ref mtx) = &*self.arc;
-        let guard = mtx.lock().unwrap();
-        cvar.wait(guard);
-    }
-
     pub fn push(&mut self, sample: f32) {
-        let mut v = self.ringbuf.push(sample);
-        while v.is_err() {
-            self.wait();
-            v = self.ringbuf.push(sample);
+        loop {
+            match self.ringbuf.push(sample) {
+                Ok(_) => return,
+                Err(_) => sleep(Duration::from_millis(1)),
+            }
         }
-        v.unwrap()
     }
 
     pub fn push_slice(&mut self, buffer: &[f32]) -> usize {
         let mut total = 0;
-
-        while total < buffer.len() {
+        loop {
             total += self.ringbuf.push_slice(&buffer[total..]);
+            if total == buffer.len() {
+                break
+            }
+            sleep(Duration::from_millis(1))
         }
-
         total
     }
 }
@@ -71,13 +68,12 @@ impl SoundWrite for OutputStream {
     }
 }
 
-fn pop_full(buffer: &mut [f32], ring: &mut ringbuf::HeapConsumer<f32>, cvar: &Condvar) {
+fn pop_full(buffer: &mut [f32], ring: &mut ringbuf::HeapConsumer<f32>) {
     let mut total = 0;
 
-    // Could this loop not spin infinitely
     while total < buffer.len() {
         total += ring.pop_slice(&mut buffer[total..]);
-        cvar.notify_all()
+        sleep(Duration::from_millis(1))
     }
 }
 
@@ -87,13 +83,11 @@ pub fn output() -> OutputStream {
 
     let mut ring = buffer();
     let (mut inp, mut out) = ring.split();
-    let cvar = Arc::new((Condvar::new(), Mutex::new(false)));
-    let cvar_res = cvar.clone();
 
     let stream = device.build_output_stream(
         &config,
         move |buf, info| {
-            pop_full(buf, &mut out, &cvar.0);
+            pop_full(buf, &mut out);
         },
         move |err| {
             eprintln!("input stream error: {:?}", err);
@@ -104,6 +98,5 @@ pub fn output() -> OutputStream {
         stream,
         config,
         ringbuf: inp,
-        arc: cvar_res,
     }
 }
