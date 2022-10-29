@@ -9,7 +9,7 @@ use io::input::input;
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
-use types::SoundRead;
+use io::SoundRead;
 use std::{f32::consts::PI, io::{Write, Read}, process::exit, thread::sleep, time::Duration};
 
 use crate::fft::FftPoint;
@@ -20,7 +20,6 @@ mod fft;
 mod io;
 mod decode;
 mod encode;
-mod types;
 
 #[cfg(test)]
 mod test;

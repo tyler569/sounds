@@ -4,7 +4,8 @@ use crate::{
     fft::{fbucket, FftDecoder},
     decode::{differential_decode::DifferentialDecoder, Decoder, data_decode::DataDecoder},
     encode::differential_encode::DifferentialEncoder,
-    types::{SoundRead, SoundWrite}, config::ChannelConfig,
+    io::{SoundRead, SoundWrite},
+    config::ChannelConfig,
 };
 
 fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {

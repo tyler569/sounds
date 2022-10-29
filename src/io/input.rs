@@ -11,7 +11,7 @@ use cpal::{
     Stream,
 };
 use ringbuf::HeapRb;
-use crate::types::{Result, SoundRead};
+use crate::io::{Result, SoundRead};
 
 const RINGBUF_SIZE: usize = 32 * 1024;
 

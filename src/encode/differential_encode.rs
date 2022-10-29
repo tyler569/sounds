@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
 use cpal::SampleRate;
 use crossbeam::channel::Sender;
-use crate::{types::{Result, SoundRead}, config::ChannelConfig};
+use crate::{io::SoundRead, config::ChannelConfig};
 use super::{FrequencyComponent, SoundCommand};
 
 #[derive(Debug, Copy, Clone)]
@@ -365,7 +365,7 @@ impl Write for DifferentialEncoder {
 }
 
 impl SoundRead for DifferentialEncoder {
-    fn read(&mut self, buffer: &mut [f32]) -> Result<usize> {
+    fn read(&mut self, buffer: &mut [f32]) -> crate::io::Result<usize> {
         if self.done() {
             return Ok(0);
         }

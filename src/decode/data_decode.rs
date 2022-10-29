@@ -3,7 +3,7 @@ use crate::{
     config::ChannelConfig,
     fft::FftDecoder,
     decode::Decoder,
-    types::SoundWrite,
+    io::SoundWrite,
     bit_org::BitOrg
 };
 use super::differential_decode::{DifferentialDecoder, DecodeResult};
@@ -101,7 +101,7 @@ impl DataDecoder {
         
 
 impl SoundWrite for DataDecoder {
-    fn write(&mut self, buffer: &[f32]) -> crate::types::Result<usize> {
+    fn write(&mut self, buffer: &[f32]) -> crate::io::Result<usize> {
         let symbol = self.sample(buffer);
 
         if let Some(symbol) = symbol {
