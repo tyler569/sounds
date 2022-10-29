@@ -3,35 +3,38 @@ use std::f32::consts::PI;
 use std::fmt::{Debug, Display, Formatter, Result};
 
 #[derive(Copy, Clone, PartialEq)]
-pub struct FftPoint {
-    pub amplitude: f32,
-    pub complex: Complex<f32>,
-    pub channel: usize,
-    pub phase: f32, // positive, * 1/PI
-}
+pub struct FftPoint(Complex<f32>);
 
 impl FftPoint {
-    pub fn new(channel: usize, value: Complex<f32>) -> Self {
-        let mut phase = 0.0;
-        let amplitude = value.abs();
+    pub fn new(value: Complex<f32>) -> Self {
+        Self(value)
+    }
 
-        if amplitude > 0.01 {
-            phase = value.im.atan2(value.re) / PI;
+    pub fn amplitude(&self) -> f32 {
+        self.0.abs()
+    }
+
+    pub fn phase(&self) -> f32  {
+        let mut phase = 0.0;
+        if self.amplitude() > 0.01 {
+            phase = self.0.im.atan2(self.0.re) / PI;
             if phase < 0.0 {
                 phase += 1.0
             }
         }
+        phase
+    }
 
-        Self {
-            complex: value,
-            amplitude,
-            channel,
-            phase,
-        }
+    pub fn phase_pi(&self) -> f32 {
+        self.phase() * PI
+    }
+
+    pub fn phase_2pi(&self) -> f32 {
+        self.phase() * 2.0 * PI
     }
 
     fn character(&self) -> char {
-        match self.amplitude {
+        match self.amplitude() {
             x if x < 0.0 => '?',
             x if x < 2.0 => ' ',
             x if x < 4.0 => '.',
@@ -42,25 +45,17 @@ impl FftPoint {
     }
 
     fn color(&self) -> Color {
-        self.phase.into()
+        self.phase().into()
     }
 }
 
 impl Debug for FftPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        if f.alternate() {
-            write!(
-                f,
-                "Channel: {:9.2} Phase: {:5.3} Amplitude: {:6.3}",
-                self.channel, self.phase, self.amplitude
-            )
-        } else {
-            write!(
-                f,
-                "f:{:.2} p:{:.3} a:{:.3}",
-                self.channel, self.phase, self.amplitude
-            )
-        }
+        write!(
+            f,
+            "(a:{:.3}, p:{:.3})",
+            self.amplitude(), self.phase()
+        )
     }
 }
 

@@ -25,7 +25,7 @@ impl FftDecoder {
     }
 
     pub fn point(&self, index: usize) -> FftPoint {
-        FftPoint::new(index, self.complexes[index])
+        FftPoint::new(self.complexes[index])
     }
 
     pub fn peak(&self) -> FftPoint {

@@ -41,27 +41,14 @@ struct Args {
 }
 
 fn main() {
-    let mut bitorg = BitOrg::new();
-    let mut buffer = [0u8; 32];
 
-    for v in [37066, 111025, 96514, 95991, 19852, 65536] {
-        bitorg.push_bits(17, v);
+    let mut input = crate::io::input::input();
+    let mut viz = crate::fft::FftVisualizer::new(&mut input, 0..150);
+
+    loop {
+        let mut buffer = [0f32; 4096];
+        viz.read(&mut buffer);
     }
-
-    let count = bitorg.read(&mut buffer).unwrap();
-
-    println!("{:?}", &buffer[..count]);
-
-    // let mut input = input();
-    // let mut buffer = [0f32; 96000];
-    // loop {
-    //     let len = input.read(&mut buffer).unwrap();
-    //     println!("{:?} {:?}", &buffer[..2], &buffer[95998..]);
-    // }
-
-
-
-
 
 
 

@@ -27,7 +27,7 @@ impl DifferentialDecoder {
     }
 
     pub fn is_signal(&mut self, point: &FftPoint) -> DecodeResult {
-        if point.amplitude < 5.0 {
+        if point.amplitude() < 5.0 {
             self.in_a_row = 0;
             return DecodeResult::Noise;
         }
@@ -61,9 +61,9 @@ impl DifferentialDecoder {
 
         let mut dphase = 0.0;
         if let Some(last_phase) = self.last_phase {
-            dphase = mod_sub(last_phase, point.phase);
+            dphase = mod_sub(last_phase, point.phase());
         }
-        self.last_phase = Some(point.phase);
+        self.last_phase = Some(point.phase());
 
         DecodeResult::Signal(self.phase_find_bucket(dphase))
     }
