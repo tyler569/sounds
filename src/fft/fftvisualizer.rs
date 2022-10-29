@@ -3,7 +3,7 @@ use std::{collections::VecDeque, ops::Range};
 use num_complex::Complex;
 use rustfft::{Fft, FftPlanner};
 
-use crate::{io::SoundRead, fft::FftPoint, config::SoundRange};
+use crate::{config::SoundRange, fft::FftPoint, io::SoundRead};
 
 pub struct FftVisualizer<'a> {
     vis_channels: SoundRange,
@@ -32,7 +32,10 @@ impl<'a> FftVisualizer<'a> {
 
         print!("[");
 
-        for channel in self.vis_channels.channels_side(self.sample_rate(), self.fft_len, 2) {
+        for channel in self
+            .vis_channels
+            .channels_side(self.sample_rate(), self.fft_len, 2)
+        {
             let p = FftPoint::new(self.cplx_buffer[channel]);
             print!("{}", p);
         }

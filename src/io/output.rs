@@ -1,17 +1,10 @@
 use std::thread::sleep;
 use std::time::Duration;
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{
-    Device,
-    Host,
-    OutputCallbackInfo,
-    OutputStreamTimestamp,
-    StreamConfig,
-    Stream,
-};
-use ringbuf::HeapRb;
 use crate::io::{Result, SoundWrite};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{Device, Host, OutputCallbackInfo, OutputStreamTimestamp, Stream, StreamConfig};
+use ringbuf::HeapRb;
 
 const RINGBUF_SIZE: usize = 32 * 1024;
 
@@ -54,7 +47,7 @@ impl OutputStream {
         loop {
             total += self.ringbuf.push_slice(&buffer[total..]);
             if total == buffer.len() {
-                break
+                break;
             }
             sleep(Duration::from_millis(1))
         }
@@ -84,15 +77,17 @@ pub fn output() -> OutputStream {
     let mut ring = buffer();
     let (mut inp, mut out) = ring.split();
 
-    let stream = device.build_output_stream(
-        &config,
-        move |buf, info| {
-            pop_full(buf, &mut out);
-        },
-        move |err| {
-            eprintln!("input stream error: {:?}", err);
-        }
-    ).unwrap();
+    let stream = device
+        .build_output_stream(
+            &config,
+            move |buf, info| {
+                pop_full(buf, &mut out);
+            },
+            move |err| {
+                eprintln!("input stream error: {:?}", err);
+            },
+        )
+        .unwrap();
 
     OutputStream {
         stream,

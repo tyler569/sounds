@@ -6,11 +6,14 @@ use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
 use std::{f32::consts::PI, ops::Range};
 
-pub mod differential_decode;
 pub mod data_decode;
+pub mod differential_decode;
 
-use crate::{fft::{FftDecoder, FftPoint}, decode::data_decode::DataDecoder};
 use crate::decode::differential_decode::DifferentialDecoder;
+use crate::{
+    decode::data_decode::DataDecoder,
+    fft::{FftDecoder, FftPoint},
+};
 
 pub trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;

@@ -87,11 +87,10 @@ mod test {
         const DATA: &[u8] = b"Hello World";
 
         let mut bitorg = BitOrg::new();
-        DATA
-            .chunks(4)
+        DATA.chunks(4)
             .map(|v| v.iter().fold((0, 0), fold_bytes))
             .for_each(|v| bitorg.push_bits(v.0 * 8, v.1));
-        
+
         let mut buffer = [0u8; 64];
         let n = bitorg.read(&mut buffer).unwrap();
 
@@ -103,7 +102,9 @@ mod test {
         let mut bitorg = BitOrg::new();
         let mut buffer = [0u8; 32];
 
-        for v in [4, 8, 6, 5, 6, 12, 6, 12, 6, 15, 2, 0, 5, 7, 6, 15, 7, 2, 6, 12, 6, 4] {
+        for v in [
+            4, 8, 6, 5, 6, 12, 6, 12, 6, 15, 2, 0, 5, 7, 6, 15, 7, 2, 6, 12, 6, 4,
+        ] {
             bitorg.push_bits(4, v);
         }
 
@@ -117,7 +118,9 @@ mod test {
         let mut bitorg = BitOrg::new();
         let mut buffer = [0u8; 32];
 
-        for v in [9, 1, 18, 22, 24, 27, 3, 15, 4, 1, 11, 22, 30, 28, 19, 12, 12, 16] {
+        for v in [
+            9, 1, 18, 22, 24, 27, 3, 15, 4, 1, 11, 22, 30, 28, 19, 12, 12, 16,
+        ] {
             bitorg.push_bits(5, v);
         }
 

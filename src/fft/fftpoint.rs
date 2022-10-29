@@ -14,7 +14,7 @@ impl FftPoint {
         self.0.abs()
     }
 
-    pub fn phase(&self) -> f32  {
+    pub fn phase(&self) -> f32 {
         let mut phase = 0.0;
         if self.amplitude() > 0.01 {
             phase = self.0.im.atan2(self.0.re);
@@ -40,11 +40,7 @@ impl FftPoint {
 
 impl Debug for FftPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(
-            f,
-            "(a:{:.3}, p:{:.3})",
-            self.amplitude(), self.phase()
-        )
+        write!(f, "(a:{:.3}, p:{:.3})", self.amplitude(), self.phase())
     }
 }
 

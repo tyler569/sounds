@@ -1,25 +1,31 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+use crate::config::SoundRange::*;
+use crate::fft::FftPoint;
 use bit_org::BitOrg;
 use clap::Parser;
 use cpal::{traits::HostTrait, Device};
 use crossbeam::channel;
 use io::input::input;
+use io::SoundRead;
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
-use io::SoundRead;
-use std::{f32::consts::PI, io::{Write, Read}, process::exit, thread::sleep, time::Duration};
-use crate::fft::FftPoint;
-use crate::config::SoundRange::*;
+use std::{
+    f32::consts::PI,
+    io::{Read, Write},
+    process::exit,
+    thread::sleep,
+    time::Duration,
+};
 
 mod bit_org;
 mod config;
-mod fft;
-mod io;
 mod decode;
 mod encode;
+mod fft;
+mod io;
 
 #[cfg(test)]
 mod test;
@@ -53,10 +59,6 @@ fn main() {
         }
     }
 }
-
-
-
-
 
 fn info() {
     use cpal::traits::*;

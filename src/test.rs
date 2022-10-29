@@ -1,11 +1,14 @@
-use std::{io::{Write, Read}, time::Duration};
+use std::{
+    io::{Read, Write},
+    time::Duration,
+};
 
 use crate::{
-    fft::{fbucket, FftDecoder},
-    decode::{differential_decode::DifferentialDecoder, Decoder, data_decode::DataDecoder},
-    encode::differential_encode::DifferentialEncoder,
-    io::{SoundRead, SoundWrite},
     config::ChannelConfig,
+    decode::{data_decode::DataDecoder, differential_decode::DifferentialDecoder, Decoder},
+    encode::differential_encode::DifferentialEncoder,
+    fft::{fbucket, FftDecoder},
+    io::{SoundRead, SoundWrite},
 };
 
 fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {
@@ -69,7 +72,7 @@ fn test_hf_encode_and_decode() {
 fn test_sweep_encode_and_decode() {
     const SAMPLES: usize = 512;
 
-    for channel in 1..SAMPLES/2 - 4 {
+    for channel in 1..SAMPLES / 2 - 4 {
         let config = ChannelConfig {
             channel_base: channel,
             channel_step: 1,
@@ -158,5 +161,5 @@ fn test_encode_and_decode_to_bytes() {
 
     decoder.read(&mut output);
     eprintln!("{:?}", output);
-    assert_eq!(&output[1..DATA.len()+1], DATA);
+    assert_eq!(&output[1..DATA.len() + 1], DATA);
 }

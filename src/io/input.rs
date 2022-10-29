@@ -1,17 +1,10 @@
 use std::thread::sleep;
 use std::time::Duration;
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{
-    Device,
-    Host,
-    InputCallbackInfo,
-    InputStreamTimestamp,
-    StreamConfig,
-    Stream,
-};
-use ringbuf::HeapRb;
 use crate::io::{Result, SoundRead};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{Device, Host, InputCallbackInfo, InputStreamTimestamp, Stream, StreamConfig};
+use ringbuf::HeapRb;
 
 const RINGBUF_SIZE: usize = 32 * 1024;
 
@@ -56,13 +49,12 @@ impl InputStream {
         loop {
             total += self.ringbuf.pop_slice(&mut buffer[total..]);
             if total == buffer.len() {
-                break
+                break;
             }
             sleep(Duration::from_millis(1));
         }
         total
     }
-
 }
 
 impl SoundRead for InputStream {
@@ -91,15 +83,17 @@ pub fn input(sample_rate_try: u32) -> InputStream {
     let mut ring = buffer();
     let (mut inp, mut out) = ring.split();
 
-    let stream = device.build_input_stream(
-        &config,
-        move |buf, info| {
-            inp.push_slice(buf);
-        },
-        move |err| {
-            eprintln!("input stream error: {:?}", err);
-        }
-    ).unwrap();
+    let stream = device
+        .build_input_stream(
+            &config,
+            move |buf, info| {
+                inp.push_slice(buf);
+            },
+            move |err| {
+                eprintln!("input stream error: {:?}", err);
+            },
+        )
+        .unwrap();
 
     InputStream {
         stream,

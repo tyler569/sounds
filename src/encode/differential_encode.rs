@@ -1,8 +1,8 @@
-use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
+use super::{FrequencyComponent, SoundCommand};
+use crate::{config::ChannelConfig, io::SoundRead};
 use cpal::SampleRate;
 use crossbeam::channel::Sender;
-use crate::{io::SoundRead, config::ChannelConfig};
-use super::{FrequencyComponent, SoundCommand};
+use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
 
 #[derive(Debug, Copy, Clone)]
 struct TimedCommand {
@@ -194,10 +194,9 @@ impl DifferentialEncoder {
 
             assert!(differential_phase_bucket < self.phase_buckets() as u64);
 
-            let phase =
-                differential_phase_bucket as f32 /
-                self.phase_buckets() as f32 *
-                2.0 * std::f32::consts::PI;
+            let phase = differential_phase_bucket as f32 / self.phase_buckets() as f32
+                * 2.0
+                * std::f32::consts::PI;
 
             let wave = FrequencyComponent::new(self.channel_frequency(channel), phase, 1.0);
             self.add(wave);
@@ -224,8 +223,11 @@ impl DifferentialEncoder {
             v.iter().fold(0, |a, &b| (a << 1) + b as u64)
         }
 
-        let iter = data.iter().flat_map(|&v| to_bit_vector(v)).collect::<Vec<bool>>();
-        
+        let iter = data
+            .iter()
+            .flat_map(|&v| to_bit_vector(v))
+            .collect::<Vec<bool>>();
+
         for v in iter.chunks(self.bits_per_symbol() as usize) {
             // eprintln!("sending symbol: {:?} {:08b}", v, to_int(v));
             self.send_symbol(to_int(v));
@@ -257,7 +259,10 @@ impl DifferentialEncoder {
     }
 
     fn on(&mut self, duration: Duration) {
-        self.enqueue_action(SoundCommand::TransitionVolume(self.channel_config.volume), duration)
+        self.enqueue_action(
+            SoundCommand::TransitionVolume(self.channel_config.volume),
+            duration,
+        )
     }
 
     fn off(&mut self, duration: Duration) {

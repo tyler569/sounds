@@ -1,12 +1,8 @@
-use std::collections::btree_set::SymmetricDifference;
+use super::differential_decode::{DecodeResult, DifferentialDecoder};
 use crate::{
-    config::ChannelConfig,
-    fft::FftDecoder,
-    decode::Decoder,
-    io::SoundWrite,
-    bit_org::BitOrg
+    bit_org::BitOrg, config::ChannelConfig, decode::Decoder, fft::FftDecoder, io::SoundWrite,
 };
-use super::differential_decode::{DifferentialDecoder, DecodeResult};
+use std::collections::btree_set::SymmetricDifference;
 
 pub struct DataDecoder {
     config: ChannelConfig,
@@ -29,7 +25,8 @@ impl DataDecoder {
         };
 
         for i in s.config.channels() {
-            s.decoders.push(DifferentialDecoder::new(config.phase_buckets()));
+            s.decoders
+                .push(DifferentialDecoder::new(config.phase_buckets()));
             s.cache.push(None);
         }
 
@@ -46,9 +43,7 @@ impl DataDecoder {
                 self.cache[i] = Some(v);
                 self.cache[i]
             }
-            DecodeResult::SameSignal => {
-                self.cache[i]
-            }
+            DecodeResult::SameSignal => self.cache[i],
         }
     }
 
@@ -66,9 +61,10 @@ impl DataDecoder {
 
         fft.print_channel_range(self.config.channels_range());
 
-        self.config.channels().enumerate().for_each(|(i, c)|
-            decoded.push(self.decoders[i].sample(&fft.point(c)))
-        );
+        self.config
+            .channels()
+            .enumerate()
+            .for_each(|(i, c)| decoded.push(self.decoders[i].sample(&fft.point(c))));
 
         // eprint!(" {:?}", decoded);
         let bits_per_channel = self.config.bits_per_channel();
@@ -77,9 +73,14 @@ impl DataDecoder {
             .iter()
             .enumerate()
             .map(|(i, &v)| self.cache_coalesce(i, v))
-            .map(|v| { eprint!(" {:?}", v); v })
+            .map(|v| {
+                eprint!(" {:?}", v);
+                v
+            })
             .rev()
-            .fold(Some(0), |a, v| Self::fold_channels_to_symbol(bits_per_channel, a, v));
+            .fold(Some(0), |a, v| {
+                Self::fold_channels_to_symbol(bits_per_channel, a, v)
+            });
 
         if symbol.is_none() {
             self.last_symbol = None;
@@ -95,10 +96,8 @@ impl DataDecoder {
         }
     }
 
-    fn push_unread_data(&mut self, symbol: u64) {
-    }
+    fn push_unread_data(&mut self, symbol: u64) {}
 }
-        
 
 impl SoundWrite for DataDecoder {
     fn write(&mut self, buffer: &[f32]) -> crate::io::Result<usize> {
