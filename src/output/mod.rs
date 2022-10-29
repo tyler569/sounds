@@ -2,13 +2,8 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
 use crossbeam::channel;
 
-pub mod soundgen;
-use soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
-
 mod command;
-pub mod differential_encode;
 pub mod differential_encode2;
-pub mod encode;
 
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();
@@ -27,48 +22,36 @@ fn make_device_and_config() -> (Device, StreamConfig) {
     (device, config)
 }
 
-fn make_output_stream<F>(
-    device: Device,
-    config: &StreamConfig,
-    mut on_window: F,
-    mut generator: SoundGenerator,
-) -> Stream
-where
-    F: FnMut(&mut [f32], &cpal::OutputCallbackInfo, &mut SoundGenerator) + Send + Sync + 'static,
-{
-    device
-        .build_output_stream(
-            config,
-            move |samples: &mut [f32], info: &cpal::OutputCallbackInfo| {
-                on_window(samples, info, &mut generator);
-            },
-            error_callback,
-        )
-        .unwrap()
+#[derive(Debug, Copy, Clone)]
+struct FrequencyComponent {
+    frequency: f64,
+    phase: f64,
+    relative_volume: f64,
 }
 
-fn error_callback(err: StreamError) {
-    println!("An error occurred: {:?}", err);
-}
+impl FrequencyComponent {
+    fn new_simple(f: impl Into<f64>) -> Self {
+        Self {
+            frequency: f.into(),
+            phase: 0.0,
+            relative_volume: 1.0,
+        }
+    }
 
-fn on_window(samples: &mut [f32], info: &cpal::OutputCallbackInfo, generator: &mut SoundGenerator) {
-    for chunk in samples.chunks_mut(2) {
-        let value = generator.tick();
-        for sample in chunk.iter_mut() {
-            *sample = value
+    fn new(f: impl Into<f64>, p: impl Into<f64>, a: impl Into<f64>) -> Self {
+        Self {
+            frequency: f.into(),
+            phase: p.into(),
+            relative_volume: a.into(),
         }
     }
 }
 
-pub fn output() -> (Stream, channel::Sender<SoundCommand>) {
-    let (snd, rcv) = channel::unbounded();
-    let (device, config) = make_device_and_config();
-    let mut generator = SoundGenerator::new(config.sample_rate.0 as f32, Some(rcv));
-    println!("{:?}", generator);
-
-    let stream = make_output_stream(device, &config, on_window, generator);
-
-    stream.play().unwrap();
-
-    (stream, snd)
+#[derive(Debug, Copy, Clone)]
+enum SoundCommand {
+    SetVolume(f64),
+    TransitionVolume(f64),
+    AddWaveform(FrequencyComponent),
+    RemoveWaveform(f64),
+    ClearWaveform,
 }

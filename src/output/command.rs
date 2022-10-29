@@ -1,15 +1,15 @@
 use std::time::Duration;
 
-use super::soundgen::FrequencyComponent;
+use super::FrequencyComponent;
 
 #[derive(Debug, Copy, Clone)]
-pub enum Operation {
+enum Operation {
     AddWaveform(FrequencyComponent),
     ClearWaveform,
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Command {
+struct Command {
     timestamp: Duration,
     operation: Operation,
 }

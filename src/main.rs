@@ -1,20 +1,16 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+use bit_org::BitOrg;
 use clap::Parser;
 use cpal::{traits::HostTrait, Device};
 use crossbeam::channel;
 use io2::input::input;
 use num_complex::{Complex, ComplexFloat};
-use output::{
-    differential_encode::DifferentialEncoder,
-    encode::Encoder,
-    soundgen::{FrequencyComponent, SoundCommand, SoundGenerator},
-};
 use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
 use traits::SoundRead;
-use std::{f32::consts::PI, io::Write, process::exit, thread::sleep, time::Duration};
+use std::{f32::consts::PI, io::{Write, Read}, process::exit, thread::sleep, time::Duration};
 
 use crate::fft::FftPoint;
 
@@ -25,7 +21,6 @@ mod io2;
 mod listen;
 mod output;
 mod traits;
-mod ui;
 
 mod inverse_fft;
 
@@ -49,15 +44,23 @@ struct Args {
 }
 
 fn main() {
+    let mut bitorg = BitOrg::new();
+    let mut buffer = [0u8; 32];
 
-
-
-    let mut input = input();
-    let mut buffer = [0f32; 96000];
-    loop {
-        let len = input.read(&mut buffer).unwrap();
-        println!("{:?} {:?}", &buffer[..2], &buffer[95998..]);
+    for v in [37066, 111025, 96514, 95991, 19852, 65536] {
+        bitorg.push_bits(17, v);
     }
+
+    let count = bitorg.read(&mut buffer).unwrap();
+
+    println!("{:?}", &buffer[..count]);
+
+    // let mut input = input();
+    // let mut buffer = [0f32; 96000];
+    // loop {
+    //     let len = input.read(&mut buffer).unwrap();
+    //     println!("{:?} {:?}", &buffer[..2], &buffer[95998..]);
+    // }
 
 
 
@@ -69,38 +72,6 @@ fn main() {
     std::process::exit(0);
 
     let args = Args::parse();
-
-    let mut istream = None;
-    let mut ostream = None;
-    let mut commands = None;
-    let mut fbucket = None;
-
-    if args.input {
-        let i = listen::listen(args.target_fbucket);
-        (istream, fbucket) = (Some(i.0), Some(i.1));
-    }
-
-    if args.output {
-        let o = output::output();
-        (ostream, commands) = (Some(o.0), Some(o.1));
-    }
-
-    if args.ui {
-        if let Some(ref snd) = commands {
-            ui::ui(snd.clone());
-        } else {
-            eprintln!("Cannot do input UI without sound output");
-            exit(1);
-        }
-    }
-
-    if let Some(ref commands) = commands {
-        let mut encoder = DifferentialEncoder::new(31.25, 4, commands.clone());
-
-        write!(encoder, "Hello World");
-    }
-
-    sleep(Duration::from_secs(1000));
 }
 
 

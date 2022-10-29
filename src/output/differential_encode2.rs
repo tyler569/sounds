@@ -1,11 +1,8 @@
 use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
-
 use cpal::SampleRate;
 use crossbeam::channel::Sender;
-
 use crate::{traits::{Result, SoundRead}, config::ChannelConfig};
-
-use super::soundgen::{FrequencyComponent, SoundCommand, SoundGenerator};
+use super::{FrequencyComponent, SoundCommand};
 
 #[derive(Debug, Copy, Clone)]
 struct TimedCommand {
@@ -275,12 +272,12 @@ impl DifferentialEncoder2 {
 
     // Taken from SoundGenerator
 
-    pub fn push_frequency(&mut self, frequency: f64) {
+    fn push_frequency(&mut self, frequency: f64) {
         self.waveform
             .push(FrequencyComponent::new_simple(frequency));
     }
 
-    pub fn push(&mut self, c: FrequencyComponent) {
+    fn push(&mut self, c: FrequencyComponent) {
         self.waveform.push(c);
     }
 

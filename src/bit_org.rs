@@ -97,4 +97,50 @@ mod test {
 
         assert_eq!(DATA, &buffer[..n]);
     }
+
+    #[test]
+    fn test_pushing_in_fours() {
+        let mut bitorg = BitOrg::new();
+        let mut buffer = [0u8; 32];
+
+        for v in [4, 8, 6, 5, 6, 12, 6, 12, 6, 15, 2, 0, 5, 7, 6, 15, 7, 2, 6, 12, 6, 4] {
+            bitorg.push_bits(4, v);
+        }
+
+        let count = bitorg.read(&mut buffer).unwrap();
+
+        assert_eq!(&buffer[..count], b"Hello World");
+    }
+
+    #[test]
+    fn test_pushing_in_fives() {
+        let mut bitorg = BitOrg::new();
+        let mut buffer = [0u8; 32];
+
+        for v in [9, 1, 18, 22, 24, 27, 3, 15, 4, 1, 11, 22, 30, 28, 19, 12, 12, 16] {
+            bitorg.push_bits(5, v);
+        }
+
+        let count = bitorg.read(&mut buffer).unwrap();
+
+        assert_eq!(&buffer[..count], b"Hello World");
+    }
+
+    #[test]
+    fn test_pushing_in_17s() {
+        let mut bitorg = BitOrg::new();
+        let mut buffer = [0u8; 32];
+
+        for v in [37066, 111025, 96514, 95991, 19852, 65536] {
+            bitorg.push_bits(17, v);
+        }
+
+        let count = bitorg.read(&mut buffer).unwrap();
+
+        // Explicit length because in this case an extra '0' has to be
+        // transmitted (it's in the LSB of the final 17-group). A real
+        // application would need to know the message length ahread of
+        // time to avoid these spurious inputs.
+        assert_eq!(&buffer[..11], b"Hello World");
+    }
 }
