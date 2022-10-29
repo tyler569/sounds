@@ -1,9 +1,10 @@
+use std::time::Duration;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, Stream, StreamConfig, StreamError};
 use crossbeam::channel;
 
-mod command;
-pub mod differential_encode2;
+pub mod differential_encode;
 
 fn make_device_and_config() -> (Device, StreamConfig) {
     let host = cpal::default_host();
@@ -54,4 +55,16 @@ enum SoundCommand {
     AddWaveform(FrequencyComponent),
     RemoveWaveform(f64),
     ClearWaveform,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum Operation {
+    AddWaveform(FrequencyComponent),
+    ClearWaveform,
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Command {
+    timestamp: Duration,
+    operation: Operation,
 }

@@ -2,11 +2,9 @@ use std::{io::{Write, Read}, time::Duration};
 
 use crate::{
     fft::{fbucket, FftDecoder},
-    listen::{differential_decode::DifferentialDecoder, Decoder, data_decode::DataDecoder},
-    output::{
-        differential_encode2::DifferentialEncoder2,
-    },
-    traits::{SoundRead, SoundWrite}, config::ChannelConfig,
+    decode::{differential_decode::DifferentialDecoder, Decoder, data_decode::DataDecoder},
+    encode::differential_encode::DifferentialEncoder,
+    types::{SoundRead, SoundWrite}, config::ChannelConfig,
 };
 
 fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {
@@ -17,7 +15,7 @@ fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {
     let mut buffer = vec![0.0; buffer_len];
     let fbucket = fbucket(sample_rate, buffer_len);
 
-    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, fbucket, config);
+    let mut encoder = DifferentialEncoder::new_config(sample_rate as f64, fbucket, config);
     encoder.send_calibration();
     encoder.write(DATA);
 
@@ -145,7 +143,7 @@ fn test_encode_and_decode_to_bytes() {
         volume: 0.4,
     };
 
-    let mut encoder = DifferentialEncoder2::new_config(sample_rate as f64, fbucket, config);
+    let mut encoder = DifferentialEncoder::new_config(sample_rate as f64, fbucket, config);
     encoder.send_calibration();
     encoder.write(DATA);
 

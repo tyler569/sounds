@@ -9,8 +9,8 @@ use std::{f32::consts::PI, ops::Range};
 pub mod differential_decode;
 pub mod data_decode;
 
-use crate::{fft::{FftDecoder, FftPoint}, listen::data_decode::DataDecoder};
-use crate::listen::differential_decode::DifferentialDecoder;
+use crate::{fft::{FftDecoder, FftPoint}, decode::data_decode::DataDecoder};
+use crate::decode::differential_decode::DifferentialDecoder;
 
 pub trait Decoder {
     fn sample(&mut self, point: &FftPoint) -> Option<u64>;

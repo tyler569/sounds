@@ -1,7 +1,11 @@
 use std::collections::btree_set::SymmetricDifference;
-
-use crate::{config::ChannelConfig, fft::FftDecoder, listen::Decoder, traits::SoundWrite, bit_org::BitOrg};
-
+use crate::{
+    config::ChannelConfig,
+    fft::FftDecoder,
+    decode::Decoder,
+    types::SoundWrite,
+    bit_org::BitOrg
+};
 use super::differential_decode::{DifferentialDecoder, DecodeResult};
 
 pub struct DataDecoder {
@@ -97,7 +101,7 @@ impl DataDecoder {
         
 
 impl SoundWrite for DataDecoder {
-    fn write(&mut self, buffer: &[f32]) -> crate::traits::Result<usize> {
+    fn write(&mut self, buffer: &[f32]) -> crate::types::Result<usize> {
         let symbol = self.sample(buffer);
 
         if let Some(symbol) = symbol {

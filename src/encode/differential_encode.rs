@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, io::Write, thread::sleep, time::Duration};
 use cpal::SampleRate;
 use crossbeam::channel::Sender;
-use crate::{traits::{Result, SoundRead}, config::ChannelConfig};
+use crate::{types::{Result, SoundRead}, config::ChannelConfig};
 use super::{FrequencyComponent, SoundCommand};
 
 #[derive(Debug, Copy, Clone)]
@@ -10,7 +10,7 @@ struct TimedCommand {
     time: Duration,
 }
 
-pub struct DifferentialEncoder2 {
+pub struct DifferentialEncoder {
     fbucket: f32,
 
     channel_config: ChannelConfig,
@@ -32,7 +32,7 @@ pub struct DifferentialEncoder2 {
     waveform: Vec<FrequencyComponent>,
 }
 
-impl DifferentialEncoder2 {
+impl DifferentialEncoder {
     pub fn new(sample_rate: f64, fbucket: f32) -> Self {
         let mut encoder = Self {
             fbucket,
@@ -350,7 +350,7 @@ impl DifferentialEncoder2 {
     }
 }
 
-impl Write for DifferentialEncoder2 {
+impl Write for DifferentialEncoder {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         // buf.iter().for_each(|&v| self.send_symbol(v as u64));
 
@@ -364,7 +364,7 @@ impl Write for DifferentialEncoder2 {
     }
 }
 
-impl SoundRead for DifferentialEncoder2 {
+impl SoundRead for DifferentialEncoder {
     fn read(&mut self, buffer: &mut [f32]) -> Result<usize> {
         if self.done() {
             return Ok(0);

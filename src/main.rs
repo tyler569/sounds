@@ -5,11 +5,11 @@ use bit_org::BitOrg;
 use clap::Parser;
 use cpal::{traits::HostTrait, Device};
 use crossbeam::channel;
-use io2::input::input;
+use io::input::input;
 use num_complex::{Complex, ComplexFloat};
 use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
-use traits::SoundRead;
+use types::SoundRead;
 use std::{f32::consts::PI, io::{Write, Read}, process::exit, thread::sleep, time::Duration};
 
 use crate::fft::FftPoint;
@@ -17,12 +17,10 @@ use crate::fft::FftPoint;
 mod bit_org;
 mod config;
 mod fft;
-mod io2;
-mod listen;
-mod output;
-mod traits;
-
-mod inverse_fft;
+mod io;
+mod decode;
+mod encode;
+mod types;
 
 #[cfg(test)]
 mod test;
