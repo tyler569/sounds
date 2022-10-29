@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use num_complex::{Complex, ComplexFloat};
 
 use super::{Decoder, FftPoint};
@@ -16,7 +18,7 @@ pub enum DecodeResult {
 }
 
 impl DifferentialDecoder {
-    const PHASE_SPECTRUM: f32 = 1.0;
+    const PHASE_SPECTRUM: f32 = 2.0 * PI;
 
     pub fn new(phase_buckets: usize) -> Self {
         Self {

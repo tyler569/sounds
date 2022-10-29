@@ -195,7 +195,9 @@ impl DifferentialEncoder {
             assert!(differential_phase_bucket < self.phase_buckets() as u64);
 
             let phase =
-                differential_phase_bucket as f32 / self.phase_buckets() as f32 * std::f32::consts::PI;
+                differential_phase_bucket as f32 /
+                self.phase_buckets() as f32 *
+                2.0 * std::f32::consts::PI;
 
             let wave = FrequencyComponent::new(self.channel_frequency(channel), phase, 1.0);
             self.add(wave);
@@ -373,6 +375,14 @@ impl SoundRead for DifferentialEncoder {
         buffer.iter_mut().for_each(|s| *s = self.tick());
 
         Ok(buffer.len())
+    }
+
+    fn sample_rate(&self) -> u32 {
+        self.sample_rate as u32
+    }
+
+    fn channels(&self) -> u32 {
+        1
     }
 }
 

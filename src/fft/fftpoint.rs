@@ -17,20 +17,9 @@ impl FftPoint {
     pub fn phase(&self) -> f32  {
         let mut phase = 0.0;
         if self.amplitude() > 0.01 {
-            phase = self.0.im.atan2(self.0.re) / PI;
-            if phase < 0.0 {
-                phase += 1.0
-            }
+            phase = self.0.im.atan2(self.0.re);
         }
         phase
-    }
-
-    pub fn phase_pi(&self) -> f32 {
-        self.phase() * PI
-    }
-
-    pub fn phase_2pi(&self) -> f32 {
-        self.phase() * 2.0 * PI
     }
 
     fn character(&self) -> char {
@@ -64,7 +53,7 @@ struct Color(u8, u8, u8);
 
 impl From<f32> for Color {
     fn from(phase: f32) -> Self {
-        let circle = phase * PI * 2.0;
+        let circle = phase;
         let r = ((circle + 0.0).sin() * 127.0 + 128.0) as u8;
         let g = ((circle + 2.0).sin() * 127.0 + 128.0) as u8;
         let b = ((circle + 4.0).sin() * 127.0 + 128.0) as u8;

@@ -11,8 +11,8 @@ use rustfft::FftPlanner;
 use rustyline::error::ReadlineError;
 use io::SoundRead;
 use std::{f32::consts::PI, io::{Write, Read}, process::exit, thread::sleep, time::Duration};
-
 use crate::fft::FftPoint;
+use crate::config::SoundRange::*;
 
 mod bit_org;
 mod config;
@@ -41,21 +41,17 @@ struct Args {
 }
 
 fn main() {
+    info();
 
-    let mut input = crate::io::input::input();
-    let mut viz = crate::fft::FftVisualizer::new(&mut input, 0..150);
+    let mut input = crate::io::input::input(96000);
+    let mut viz = crate::fft::FftVisualizer::new(&mut input, 32 * 1024, Frequencies(2000..2050));
 
     loop {
         let mut buffer = [0f32; 4096];
-        viz.read(&mut buffer);
+        if viz.read(&mut buffer).unwrap() == 0 {
+            break;
+        }
     }
-
-
-
-
-    std::process::exit(0);
-
-    let args = Args::parse();
 }
 
 

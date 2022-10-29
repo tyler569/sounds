@@ -1,5 +1,7 @@
 use std::{time::Duration, ops::{Range, RangeInclusive}};
 
+use crate::fft;
+
 #[derive(Copy, Clone, Debug)]
 pub struct ChannelConfig {
     pub channel_base: usize,
@@ -58,5 +60,30 @@ impl ChannelConfig {
 
     pub fn bits_per_symbol(&self) -> u32 {
         self.bits_per_channel() * self.channels as u32
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum SoundRange {
+    Channels(Range<usize>),
+    Frequencies(Range<usize>),
+}
+
+impl SoundRange {
+    pub fn channels(&self, sample_rate: u32, fft_len: usize) -> Range<usize> {
+        match self.clone() {
+            Self::Channels(v) => v,
+            Self::Frequencies(Range { start: min, end: max }) => {
+                let fbucket = sample_rate as f64 / fft_len as f64;
+                let min = (min as f64 / fbucket) as usize;
+                let max = (max as f64 / fbucket) as usize + 1;
+                min..max
+            }
+        }
+    }
+
+    pub fn channels_side(&self, sample_rate: u32, fft_len: usize, side: usize) -> Range<usize> {
+        let Range { start: min, end: max } = self.channels(sample_rate, fft_len);
+        min.saturating_sub(side)..max.saturating_add(side)
     }
 }

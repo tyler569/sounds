@@ -9,7 +9,7 @@ use crate::{
 };
 
 fn test_encode_and_decode(config: ChannelConfig, buffer_len: usize) -> bool {
-    const DATA: &[u8] = b"Hello World";
+    const DATA: &[u8] = b"\x01\x02\x04\x08\xff\x03Hello World";
     let data_u64: Vec<u64> = DATA.iter().map(|&v| v as u64).collect();
 
     let sample_rate: f32 = 48000.0;
