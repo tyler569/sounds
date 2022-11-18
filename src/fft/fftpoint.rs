@@ -1,6 +1,7 @@
 use num_complex::{Complex, ComplexFloat};
 use std::f32::consts::PI;
 use std::fmt::{Debug, Display, Formatter, Result};
+use crate::color::{Color, color, reset};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct FftPoint(Complex<f32>);
@@ -42,27 +43,6 @@ impl Debug for FftPoint {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "(a:{:.3}, p:{:.3})", self.amplitude(), self.phase())
     }
-}
-
-#[derive(Copy, Clone, Debug)]
-struct Color(u8, u8, u8);
-
-impl From<f32> for Color {
-    fn from(phase: f32) -> Self {
-        let circle = phase;
-        let r = ((circle + 0.0).sin() * 127.0 + 128.0) as u8;
-        let g = ((circle + 2.0).sin() * 127.0 + 128.0) as u8;
-        let b = ((circle + 4.0).sin() * 127.0 + 128.0) as u8;
-        Color(r, g, b)
-    }
-}
-
-fn color(f: &mut Formatter<'_>, c: Color) -> Result {
-    write!(f, "\x1b[38;2;{};{};{}m", c.0, c.1, c.2)
-}
-
-fn reset(f: &mut Formatter<'_>) -> Result {
-    write!(f, "\x1b[0m")
 }
 
 impl Display for FftPoint {

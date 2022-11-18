@@ -21,6 +21,7 @@ use std::{
 };
 
 mod bit_org;
+mod color;
 mod config;
 mod decode;
 mod encode;
@@ -49,15 +50,27 @@ struct Args {
 fn main() {
     info();
 
-    let mut input = crate::io::input::input(96000);
-    let mut viz = crate::fft::FftVisualizer::new(&mut input, 32 * 1024, Frequencies(2000..2050));
 
-    loop {
-        let mut buffer = [0f32; 4096];
-        if viz.read(&mut buffer).unwrap() == 0 {
-            break;
-        }
+    let mut x = 0.0;
+    while x < 10.0 {
+        let color: color::Color = x.into();
+        print!("{}#{}", color, color::Reset);
+        x += 0.1;
     }
+    println!();
+
+    io::input4::main();
+
+
+    //let mut input = crate::io::input::input(96000);
+    //let mut viz = crate::fft::FftVisualizer::new(&mut input, 32 * 1024, Frequencies(2000..2050));
+
+    //loop {
+    //    let mut buffer = [0f32; 4096];
+    //    if viz.read(&mut buffer).unwrap() == 0 {
+    //        break;
+    //    }
+    //}
 }
 
 fn info() {

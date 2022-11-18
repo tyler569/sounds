@@ -5,6 +5,9 @@ mod read;
 mod result;
 mod write;
 
+pub mod input4;
+mod types4;
+
 pub use read::SoundRead;
 pub use result::Result;
 pub use write::SoundWrite;
