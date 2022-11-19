@@ -1,7 +1,7 @@
+use crate::color::{Color, Reset};
 use num_complex::{Complex, ComplexFloat};
 use std::f32::consts::PI;
 use std::fmt::{Debug, Display, Formatter, Result};
-use crate::color::{Color, color, reset};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct FftPoint(Complex<f32>);
@@ -51,9 +51,7 @@ impl Display for FftPoint {
         if c == ' ' {
             write!(f, "{}", self.character())
         } else {
-            color(f, self.color())?;
-            write!(f, "{}", self.character())?;
-            reset(f)
+            write!(f, "{}{}{}", self.color(), self.character(), Reset)
         }
     }
 }

@@ -6,6 +6,7 @@ mod result;
 mod write;
 
 pub mod input4;
+pub mod output4;
 mod types4;
 
 pub use read::SoundRead;

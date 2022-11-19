@@ -50,7 +50,6 @@ struct Args {
 fn main() {
     info();
 
-
     let mut x = 0.0;
     while x < 10.0 {
         let color: color::Color = x.into();
@@ -59,8 +58,10 @@ fn main() {
     }
     println!();
 
-    io::input4::main();
-
+    std::thread::scope(|s| {
+        s.spawn(|| io::input4::main());
+        s.spawn(|| io::output4::main());
+    });
 
     //let mut input = crate::io::input::input(96000);
     //let mut viz = crate::fft::FftVisualizer::new(&mut input, 32 * 1024, Frequencies(2000..2050));

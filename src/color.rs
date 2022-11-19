@@ -1,4 +1,4 @@
-use std::fmt::{Formatter, Result, Display};
+use std::fmt::{Display, Formatter, Result};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Color(u8, u8, u8);
@@ -23,10 +23,6 @@ impl From<f32> for Color {
     }
 }
 
-pub fn color(f: &mut Formatter<'_>, c: Color) -> Result {
-    write!(f, "\x1b[38;2;{};{};{}m", c.0, c.1, c.2)
-}
-
 impl Display for Color {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.write(f)
@@ -46,8 +42,4 @@ impl Display for Reset {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.write(f)
     }
-}
-
-pub fn reset(f: &mut Formatter<'_>) -> Result {
-    write!(f, "\x1b[0m")
 }
