@@ -8,6 +8,10 @@ impl Color {
         phase.into()
     }
 
+    pub fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self(r, g, b)
+    }
+
     pub fn write(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "\x1b[38;2;{};{};{}m", self.0, self.1, self.2)
     }

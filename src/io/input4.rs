@@ -1,5 +1,6 @@
 use cpal::{traits::*, BufferSize, Device, Stream, StreamConfig};
 use crossbeam::channel;
+use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::sync::mpsc::{channel, SendError};
 
@@ -7,7 +8,13 @@ use super::types4::{Fft, Samples};
 use crate::color::Reset;
 
 fn device() -> Device {
-    cpal::default_host().default_input_device().unwrap()
+    // cpal::default_host().default_input_device().unwrap()
+
+    cpal::default_host()
+        .input_devices()
+        .unwrap()
+        .find(|d| d.name().unwrap() == "MacBook Air Microphone")
+        .unwrap()
 }
 
 fn config(device: &Device, sample_rate_try: u32, buffer_size: usize) -> StreamConfig {
@@ -23,69 +30,61 @@ fn config(device: &Device, sample_rate_try: u32, buffer_size: usize) -> StreamCo
     config
 }
 
-pub fn main() {
-    let sample_rate = 48000;
-    let buffer_size = 128;
+pub struct InputStream {
+    stream: Stream,
+    samples_channel: channel::Receiver<Samples>,
+    offset_channel: channel::Sender<usize>,
+    sample_rate: u32,
+}
 
-    let device = device();
-    let config = config(&device, sample_rate, buffer_size);
-    let channels = config.channels as usize;
+impl InputStream {
+    pub fn new(sample_rate_try: u32, buffer_size: usize) -> Self {
+        let device = device();
+        let config = config(&device, sample_rate_try, buffer_size);
 
-    let sample_rate = config.sample_rate.0;
+        let channels = config.channels as usize;
+        let sample_rate = config.sample_rate.0;
+        let (samples_send, samples_channel) = channel::unbounded();
 
-    let (send, recv) = channel::unbounded();
+        let (offset_channel, offset_recv) = channel::bounded(0);
+        let mut offset_buffer = vec![0.; buffer_size * channels];
+        let mut offset = 0;
 
-    println!("---");
-    println!("input v4");
-    println!("using {} with config {:?}", device.name().unwrap(), config);
-    println!("f0 = {}", sample_rate as f32 / buffer_size as f32);
+        let stream = device
+            .build_input_stream(
+                &config,
+                move |buf, _info| {
+                    if let Ok(relative_offset) = offset_recv.try_recv() {
+                        offset += relative_offset * channels;
+                        offset %= buf.len();
 
-    let (c_send, c_recv) = channel::bounded::<usize>(0);
-    let mut offset = 0;
-    let mut last_offset = 0;
-    let mut offset_buffer = vec![0f32; buffer_size * channels];
+                        let up_to = buf.len() - offset;
+                        offset_buffer[..offset].copy_from_slice(&buf[up_to..]);
+                    } else {
+                        let up_to = buf.len() - offset;
+                        offset_buffer[offset..].copy_from_slice(&buf[..up_to]);
+                        samples_send.send(Samples::new(&offset_buffer, channels));
+                        offset_buffer[..offset].copy_from_slice(&buf[up_to..]);
+                    }
+                },
+                move |err| eprintln!("error: {:?}", err),
+            )
+            .unwrap();
+        stream.play();
 
-    let stream = device
-        .build_input_stream(
-            &config,
-            move |buf, _info| {
-                if let Ok(v) = c_recv.try_recv() {
-                    offset += v * channels;
-                    offset %= (buf.len());
-
-                    offset_buffer[..offset].copy_from_slice(&buf[buf.len() - offset..])
-                } else {
-                    offset_buffer[offset..].copy_from_slice(&buf[..buf.len() - offset]);
-                    let samples = Samples::new(&offset_buffer, channels);
-                    send.send(samples);
-                    offset_buffer[..offset].copy_from_slice(&buf[buf.len() - offset..])
-                }
-            },
-            move |err| eprintln!("error: {:?}", err),
-        )
-        .unwrap();
-    stream.play();
-
-    let mut offset = 0;
-    let mut last = false;
-
-    for samples in recv.into_iter() {
-        let fft = samples.into_fft();
-        print!("{} ", fft);
-
-        let point = fft.point(1);
-        if point.amplitude() > 2.0 {
-            let diff = ((1.0 - point.phase_01()) * buffer_size as f32) as usize;
-            if diff > 0 {
-                if last {
-                    c_send.send(diff as usize);
-                }
-                last = true;
-            } else {
-                last = false;
-            }
+        Self {
+            stream,
+            samples_channel,
+            offset_channel,
+            sample_rate,
         }
+    }
 
-        println!("{:?} {:?}", point, fft.point(2));
+    pub fn channel(&self) -> &channel::Receiver<Samples> {
+        &self.samples_channel
+    }
+
+    pub fn add_offset(&self, offset: usize) {
+        self.offset_channel.send(offset);
     }
 }

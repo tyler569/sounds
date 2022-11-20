@@ -11,5 +11,5 @@ cpal = "0.14.0"
 crossbeam = "0.8.2"
 ringbuf = "0.3.1"
 rustyline = "10.0.0"
-rustfft = "6.0.1"
+rustfft = { version = "6.1", features = ["neon"] }
 num-complex = "0.4.2"

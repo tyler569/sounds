@@ -21,8 +21,10 @@ impl Samples {
 
     pub fn into_fft(mut self) -> Fft {
         let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(self.0.len());
+        let len = self.0.len();
+        let fft = planner.plan_fft_forward(len);
         fft.process(&mut self.0);
+        self.0.iter_mut().for_each(|v| *v *= 1. / len as f32);
         Fft(self.0)
     }
 
@@ -30,11 +32,15 @@ impl Samples {
         self.0.len()
     }
 
+    pub fn window_null(&mut self) {
+        self.0.iter_mut().for_each(|v| *v *= 0.);
+    }
+
     pub fn window_sin(&mut self) {
         let n = self.len() as f32;
 
         self.0.iter_mut().enumerate()
-            .map(|(i, v)| *v *= ((PI * i as f32) / n).sin());
+            .for_each(|(i, v)| *v *= ((PI * i as f32) / n).sin());
     }
 
     pub fn window_plank(&mut self) {
@@ -76,6 +82,44 @@ impl Samples {
 
     pub fn iter(&self) -> impl Iterator<Item = f32> + '_ {
         self.0.iter().map(|v| v.re)
+    }
+
+    pub fn offset(&mut self, next: &Samples, offset: usize) {
+        self.0.rotate_left(offset);
+        self.0[offset..].copy_from_slice(&next.0[..offset]);
+    }
+}
+
+fn sample_char(sample: f32) -> char {
+    match sample.abs() {
+        a if a > 0.3 => '#',
+        a if a > 0.2 => '*',
+        a if a > 0.1 => '^',
+        a if a > 0.05 => ':',
+        a if a > 0.01 => '.',
+        _ => ' ',
+    }
+}
+
+impl std::fmt::Display for Samples {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{")?;
+        let positive = Color::rgb(250, 100, 100);
+        let negative = Color::rgb(50, 200, 50);
+        for sample in &self.0 {
+            if sample.im.abs() < 0.1 {
+                if sample.re > 0. {
+                    write!(f, "{}{}", positive, sample_char(sample.re))?;
+                } else {
+                    write!(f, "{}{}", negative, sample_char(sample.re))?;
+                }
+            } else {
+                // large imaginary component
+                write!(f, "{}?", Color::rgb(50, 50, 200))?;
+            }
+        }
+        write!(f, "{}}}", Reset)?;
+        Ok(())
     }
 }
 
@@ -153,13 +197,14 @@ impl FftPoint {
 
     fn amp_char(&self) -> char {
         match self.amplitude() {
-            a if a < -0.01 => '?',
-            a if a < 0.5 => ' ',
-            a if a < 2.0 => '.',
-            a if a < 4.0 => ':',
-            a if a < 8.0 => '^',
-            a if a < 16.0 => '*',
-            a if a < 24.0 => '#',
+            a if a > 1. => '!',
+            a if a > 0.25 => '#',
+            a if a > 0.125 => '%',
+            a if a > 0.0625 => '*',
+            a if a > 0.0312 => '^',
+            a if a > 0.0151 => ':',
+            a if a > 0.0075 => '.',
+            a if a >= 0. => ' ',
             _ => '?',
         }
     }
@@ -175,7 +220,7 @@ impl FftPoint {
 
 impl std::fmt::Debug for FftPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 > 0.1 {
+        if self.0 > 0.01 {
             write!(f, "FftPoint({:+.5}, {:+.5})", self.0, self.1)
         } else {
             write!(f, "FftPoint({:+.5},        x)", self.0)
@@ -184,9 +229,18 @@ impl std::fmt::Debug for FftPoint {
 }
 
 impl std::fmt::Display for FftPoint {
+    /// Display an FftPoint
+    /// 
+    /// By default, this will print an ANSI color reset character after the point,
+    /// if this is not needed (for example to print many points), you can specify
+    /// `alternate()` (with `#`), which will not print an ANSI color reset.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.amplitude() > 1.0 {
-            write!(f, "{}{}", self.color(), self.amp_char())?;
+        if self.amplitude() > 0.0075 {
+            if f.alternate() {
+                write!(f, "{}{}", self.color(), self.amp_char())?;
+            } else {
+                write!(f, "{}{}{}", self.color(), self.amp_char(), Reset)?;
+            }
         } else {
             write!(f, " ")?;
         }
@@ -200,7 +254,7 @@ impl std::fmt::Display for Fft {
         write!(f, "[")?;
 
         for point in self.points() {
-            write!(f, "{}", point)?;
+            write!(f, "{:#}", point)?;
         }
 
         write!(f, "{}]", Reset)?;

@@ -1,24 +1,14 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-use crate::config::SoundRange::*;
-use crate::fft::FftPoint;
-use bit_org::BitOrg;
-use clap::Parser;
-use cpal::{traits::HostTrait, Device};
-use crossbeam::channel;
-use io::input::input;
-use io::SoundRead;
-use num_complex::{Complex, ComplexFloat};
-use rustfft::FftPlanner;
-use rustyline::error::ReadlineError;
-use std::{
-    f32::consts::PI,
-    io::{Read, Write},
-    process::exit,
-    thread::sleep,
-    time::Duration,
+use std::thread;
+
+use crate::io::{
+    types4::{Fft, FftPoint, Samples},
+    output4::OutputStream,
+    input4::InputStream,
 };
+use bit_org::BitOrg;
 
 mod bit_org;
 mod color;
@@ -31,47 +21,61 @@ mod io;
 #[cfg(test)]
 mod test;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[arg(short, long, default_value_t = 30.0)]
-    target_fbucket: f32,
-
-    #[arg(short, long)]
-    input: bool,
-
-    #[arg(short, long)]
-    output: bool,
-
-    #[arg(short, long)]
-    ui: bool,
-}
+const BUFFER_SIZE: usize = 128;
 
 fn main() {
     info();
+    rainbow();
 
-    let mut x = 0.0;
-    while x < 10.0 {
-        let color: color::Color = x.into();
-        print!("{}#{}", color, color::Reset);
-        x += 0.1;
-    }
-    println!();
+    let istream = InputStream::new(48000, BUFFER_SIZE);
+    let ichan = istream.channel();
 
-    std::thread::scope(|s| {
-        s.spawn(|| io::input4::main());
-        s.spawn(|| io::output4::main());
+    thread::spawn(|| {
+        let ostream = OutputStream::new(48000, BUFFER_SIZE);
+        let ochan = ostream.channel();
+
+        for i in (1..=2).cycle() {
+            let mut fft = Fft::new(BUFFER_SIZE);
+            fft.set_point(i, FftPoint::new(1., 0.));
+        }
     });
 
-    //let mut input = crate::io::input::input(96000);
-    //let mut viz = crate::fft::FftVisualizer::new(&mut input, 32 * 1024, Frequencies(2000..2050));
+    let mut offset = 0;
+    let mut message = None;
 
-    //loop {
-    //    let mut buffer = [0f32; 4096];
-    //    if viz.read(&mut buffer).unwrap() == 0 {
-    //        break;
-    //    }
-    //}
+    for samples in ichan.into_iter() {
+        println!("{}", samples);
+
+        let fft = samples.into_fft();
+        let point = fft.point(1);
+        if point.amplitude() > 0.02 {
+            let diff = ((1. - point.phase_01()) * BUFFER_SIZE as f32) as usize;
+            if diff > 3 && diff < 124 {
+                message = Some(diff);
+                istream.add_offset(diff as usize);
+            }
+        }
+
+        print!("{} {:?}", fft, point);
+        if let Some(v) = message {
+            println!(" (adjusting by {})", v);
+        } else {
+            println!();
+        }
+
+        message = None;
+    }
+}
+
+
+fn rainbow() {
+    let mut x = 0.0;
+    while x < 2. * std::f32::consts::PI {
+        let color: color::Color = x.into();
+        print!("{}#", color);
+        x += 0.1;
+    }
+    println!("{}", color::Reset);
 }
 
 fn info() {
@@ -84,6 +88,7 @@ fn info() {
 
     let host = cpal::default_host();
 
+    println!("--- output ---");
     let devices = host.output_devices().unwrap();
 
     for device in devices {
@@ -95,7 +100,6 @@ fn info() {
     }
 
     println!("--- input ---");
-
     let devices = host.input_devices().unwrap();
 
     for device in devices {
