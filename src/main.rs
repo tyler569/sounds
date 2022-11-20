@@ -4,18 +4,14 @@
 use std::thread;
 
 use crate::io::{
-    types4::{Fft, FftPoint, Samples},
-    output4::OutputStream,
-    input4::InputStream,
+    types::{Fft, FftPoint, Samples},
+    output::OutputStream,
+    input::InputStream,
 };
 use bit_org::BitOrg;
 
 mod bit_org;
 mod color;
-mod config;
-mod decode;
-mod encode;
-mod fft;
 mod io;
 
 #[cfg(test)]

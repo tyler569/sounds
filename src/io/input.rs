@@ -1,105 +1,90 @@
-use std::thread::sleep;
-use std::time::Duration;
+use cpal::{traits::*, BufferSize, Device, Stream, StreamConfig};
+use crossbeam::channel;
+use std::collections::VecDeque;
+use std::io::{Read, Write};
+use std::sync::mpsc::{channel, SendError};
 
-use crate::io::{Result, SoundRead};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Device, Host, InputCallbackInfo, InputStreamTimestamp, Stream, StreamConfig};
-use ringbuf::HeapRb;
-
-const RINGBUF_SIZE: usize = 32 * 1024;
+use super::types::{Fft, Samples};
+use crate::color::Reset;
 
 fn device() -> Device {
-    cpal::default_host().default_input_device().unwrap()
+    // cpal::default_host().default_input_device().unwrap()
+
+    cpal::default_host()
+        .input_devices()
+        .unwrap()
+        .find(|d| d.name().unwrap() == "MacBook Air Microphone")
+        .unwrap()
 }
 
-fn config(device: &Device, sample_rate_try: u32) -> StreamConfig {
-    device
+fn config(device: &Device, sample_rate_try: u32, buffer_size: usize) -> StreamConfig {
+    let mut config = device
         .supported_input_configs()
         .unwrap()
         .min_by_key(|c| (c.max_sample_rate().0 as i64 - sample_rate_try as i64).abs())
         .unwrap()
         .with_max_sample_rate()
-        .config()
-}
+        .config();
 
-fn buffer() -> HeapRb<f32> {
-    HeapRb::new(RINGBUF_SIZE)
+    config.buffer_size = BufferSize::Fixed(buffer_size as u32);
+    config
 }
 
 pub struct InputStream {
     stream: Stream,
-    config: StreamConfig,
-    ringbuf: ringbuf::HeapConsumer<f32>,
-
-    limit: i32,
+    samples_channel: channel::Receiver<Samples>,
+    offset_channel: channel::Sender<usize>,
+    sample_rate: u32,
 }
 
 impl InputStream {
-    pub fn pop(&mut self) -> f32 {
-        loop {
-            match self.ringbuf.pop() {
-                Some(v) => return v,
-                None => sleep(Duration::from_millis(1)),
-            }
+    pub fn new(sample_rate_try: u32, buffer_size: usize) -> Self {
+        let device = device();
+        let config = config(&device, sample_rate_try, buffer_size);
+
+        let channels = config.channels as usize;
+        let sample_rate = config.sample_rate.0;
+        let (samples_send, samples_channel) = channel::unbounded();
+
+        let (offset_channel, offset_recv) = channel::bounded(0);
+        let mut offset_buffer = vec![0.; buffer_size * channels];
+        let mut offset = 0;
+
+        let stream = device
+            .build_input_stream(
+                &config,
+                move |buf, _info| {
+                    if let Ok(relative_offset) = offset_recv.try_recv() {
+                        offset += relative_offset * channels;
+                        offset %= buf.len();
+
+                        let up_to = buf.len() - offset;
+                        offset_buffer[..offset].copy_from_slice(&buf[up_to..]);
+                    } else {
+                        let up_to = buf.len() - offset;
+                        offset_buffer[offset..].copy_from_slice(&buf[..up_to]);
+                        samples_send.send(Samples::new(&offset_buffer, channels));
+                        offset_buffer[..offset].copy_from_slice(&buf[up_to..]);
+                    }
+                },
+                move |err| eprintln!("error: {:?}", err),
+            )
+            .unwrap();
+        stream.play();
+
+        Self {
+            stream,
+            samples_channel,
+            offset_channel,
+            sample_rate,
         }
     }
 
-    pub fn pop_slice(&mut self, buffer: &mut [f32]) -> usize {
-        let mut total = 0;
-        loop {
-            total += self.ringbuf.pop_slice(&mut buffer[total..]);
-            if total == buffer.len() {
-                break;
-            }
-            sleep(Duration::from_millis(1));
-        }
-        total
-    }
-}
-
-impl SoundRead for InputStream {
-    fn read(&mut self, buffer: &mut [f32]) -> Result<usize> {
-        self.limit -= 1;
-        if self.limit < 0 {
-            // return Ok(0);
-        }
-
-        Ok(self.pop_slice(buffer))
+    pub fn channel(&self) -> &channel::Receiver<Samples> {
+        &self.samples_channel
     }
 
-    fn sample_rate(&self) -> u32 {
-        self.config.sample_rate.0
-    }
-
-    fn channels(&self) -> u32 {
-        self.config.channels.into()
-    }
-}
-
-pub fn input(sample_rate_try: u32) -> InputStream {
-    let device = device();
-    let config = config(&device, sample_rate_try);
-
-    let mut ring = buffer();
-    let (mut inp, mut out) = ring.split();
-
-    let stream = device
-        .build_input_stream(
-            &config,
-            move |buf, info| {
-                inp.push_slice(buf);
-            },
-            move |err| {
-                eprintln!("input stream error: {:?}", err);
-            },
-        )
-        .unwrap();
-
-    InputStream {
-        stream,
-        config,
-        ringbuf: out,
-
-        limit: 10,
+    pub fn add_offset(&self, offset: usize) {
+        self.offset_channel.send(offset);
     }
 }
